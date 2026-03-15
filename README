@@ -1,18 +1,97 @@
-Это пример домашней библиотеки.
-Все книги библиотеки представляют собой файлы различных форматов. Они хранятся в выбранном каталоге файловой системы.
-Книга может принадлежать разным жанрам и иметь разное количество авторов.
-Кроме того, могут быть сборники статей конференций и т.п.
-При добавлении книги в библиотеку мы указываем путь к книге, и вводим ее аотрибуты.
+# BookShelves
 
-Для работы с книгами в библиотеке предназначены полки, можно создавать полки.
-На каждую полку можно загружать книги из библиотеки.
+---
 
-Атрибуты книг хрантяся в БД. К аотрибутам относятся:
-    - автор(ы)
-    - название
-    - тип
-    - жанр(ы)
-    - тег(и)
-кроме того, храним информацию о типе, кол-ве страниц, размер файла, издание и т.п.
+## English
 
-Для работы с базой используем ОРМ. В качестве БД - sqlite
+### About
+
+BookShelves is a desktop application for managing a personal home e-book library.
+The application is built with PyQt5 and stores all data in a SQLite database via the Peewee ORM.
+
+The library (books, authors, genres, tags) is shared across all users and devices.
+Each user maintains their own personal set of shelves — curated collections of books from the shared library.
+
+### Key Features
+
+- **Shared library** — books, authors, genres and tags are accessible by all users
+- **Personal shelves** — each user creates and manages their own shelves independently
+- **Multiple shelves** — a book can appear on several shelves at the same time
+- **File format support** — epub, pdf, fb2, mobi, djvu and others
+- **Flexible organisation** — filter and search by author, genre, tag, year, format
+- **Network access** — the database lives on a shared network folder (NAS or SMB share); all devices on the local network connect to the same file
+- **Local settings per device** — each client stores its own configuration locally via QSettings: path to the shared database, associations between file formats and reader applications, and UI preferences
+
+### Tech Stack
+
+| Component       | Technology                  |
+|-----------------|-----------------------------|
+| UI              | PyQt5                       |
+| Database        | SQLite                      |
+| ORM             | Peewee                      |
+| Local settings  | QSettings (PyQt5 built-in)  |
+
+### Data Model (overview)
+
+```
+Shared (all users):
+  Author, Genre, Tag, BookFormat, Book
+  BookAuthor, BookGenre, BookTag
+
+Personal (per user):
+  User, Shelf, ShelfBook
+```
+
+### Local Settings (per device, not in the database)
+
+- Path to the shared SQLite database file
+- File format → reader application bindings (e.g. epub → Foliate, pdf → Evince)
+- UI preferences (window size, theme, etc.)
+
+---
+
+## Русский
+
+### О проекте
+
+BookShelves — десктопное приложение для управления домашней электронной библиотекой.
+Приложение написано на PyQt5, данные хранятся в базе SQLite через ORM Peewee.
+
+Библиотека (книги, авторы, жанры, теги) является общей для всех пользователей и устройств.
+При этом у каждого пользователя свой личный набор полок — подборок книг из общей библиотеки.
+
+### Основные возможности
+
+- **Общая библиотека** — книги, авторы, жанры и теги доступны всем пользователям
+- **Личные полки** — каждый пользователь создаёт свои полки независимо от других
+- **Несколько полок** — одна книга может одновременно находиться на нескольких полках
+- **Поддержка форматов** — epub, pdf, fb2, mobi, djvu и другие
+- **Гибкая организация** — фильтрация и поиск по автору, жанру, тегу, году, формату
+- **Сетевой доступ** — база данных хранится в общей сетевой папке (NAS или SMB); все устройства в локальной сети работают с одним файлом
+- **Локальные настройки** — каждый клиент хранит свою конфигурацию локально через QSettings: путь к базе, привязки форматов к программам-ридерам, настройки интерфейса
+
+### Технологии
+
+| Компонент            | Технология                  |
+|----------------------|-----------------------------|
+| Интерфейс            | PyQt5                       |
+| База данных          | SQLite                      |
+| ORM                  | Peewee                      |
+| Локальные настройки  | QSettings (встроен в PyQt5) |
+
+### Модель данных (обзор)
+
+```
+Общие (для всех пользователей):
+  Author, Genre, Tag, BookFormat, Book
+  BookAuthor, BookGenre, BookTag
+
+Личные (у каждого пользователя):
+  User, Shelf, ShelfBook
+```
+
+### Локальные настройки (на каждом устройстве отдельно, не в базе)
+
+- Путь к файлу общей базы данных SQLite
+- Привязки форматов файлов к программам-ридерам (например, epub → Foliate, pdf → Evince)
+- Настройки интерфейса (размер окна, тема и т.п.)
