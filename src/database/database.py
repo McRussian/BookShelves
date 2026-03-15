@@ -5,8 +5,17 @@ database_proxy = DatabaseProxy()
 
 
 def init_db(db_path: Path) -> SqliteDatabase:
-    db = SqliteDatabase(db_path, pragmas={'journal_mode': 'wal', 'foreign_keys': 1})
+    db = SqliteDatabase(db_path, pragmas={'foreign_keys': 1}, timeout=30)
     database_proxy.initialize(db)
+    return db
+
+
+def create_db(db_path: Path) -> SqliteDatabase:
+    """Create a new DB file and enable WAL mode (persistent, set once)."""
+    db = init_db(db_path)
+    db.connect()
+    db.execute_sql('PRAGMA journal_mode=wal')
+    db.close()
     return db
 
 
