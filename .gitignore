@@ -1,2 +1,7 @@
 src/database/__pycache__/*
-src/gui/__pycache__*
+src/gui/__pycache__/*
+.idea/*
+src/__pycache__/*
+src/gui/dialogs/__pycache__/*
+src/gui/widgets/__pycache__/*
+

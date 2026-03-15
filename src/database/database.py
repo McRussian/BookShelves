@@ -10,13 +10,12 @@ def init_db(db_path: Path) -> SqliteDatabase:
     return db
 
 
-def create_db(db_path: Path) -> SqliteDatabase:
-    """Create a new DB file and enable WAL mode (persistent, set once)."""
-    db = init_db(db_path)
-    db.connect()
-    db.execute_sql('PRAGMA journal_mode=wal')
-    db.close()
-    return db
+def create_db(db_path: Path) -> None:
+    """Создать пустой файл БД, удалив старый вместе с WAL/SHM файлами."""
+    for p in (db_path,
+              db_path.with_name(db_path.name + '-wal'),
+              db_path.with_name(db_path.name + '-shm')):
+        p.unlink(missing_ok=True)
 
 
 class BaseModel(Model):

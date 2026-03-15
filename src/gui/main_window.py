@@ -1,12 +1,18 @@
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (
     QFileDialog, QMainWindow, QMenuBar, QMessageBox,
     QTabWidget, QToolBar, QVBoxLayout, QWidget,
 )
 
+from src.database.database import create_db, database_proxy, init_db
+from src.database.models import ALL_MODELS
+from src.database.seed import seed_reference_data
+from src.gui.dialogs.author_dialog import AuthorDialog
+from src.gui.dialogs.book_dialog import BookDialog
+from src.gui.dialogs.tag_dialog import TagDialog
 from src.gui.stats_bar import StatsBar
 from src.settings import Settings
 
@@ -23,7 +29,13 @@ class MainWindow(QMainWindow):
         self._setup_menu()
         self._setup_toolbar()
         self._setup_central()
-        self._set_db_active(self._settings.db_path is not None)
+
+        db_path = self._settings.db_path
+        if db_path and db_path.exists():
+            self._open_db(db_path)
+        else:
+            self._settings.db_path = None
+            self._set_db_active(False)
 
     # ── Меню ─────────────────────────────────────────────────────────────────
 
@@ -106,6 +118,10 @@ class MainWindow(QMainWindow):
 
     # ── Вспомогательные методы ────────────────────────────────────────────────
 
+    def closeEvent(self, event: QCloseEvent) -> None:
+        self._close_db()
+        super().closeEvent(event)
+
     def _set_db_active(self, active: bool) -> None:
         """Показывает или скрывает элементы, зависящие от наличия открытой БД."""
         self._db_menu.setEnabled(active)
@@ -129,6 +145,21 @@ class MainWindow(QMainWindow):
         index = self.shelf_tabs.addTab(widget, name)
         self.shelf_tabs.setCurrentIndex(index)
 
+    # ── Вспомогательный метод открытия/подключения БД ────────────────────────
+
+    def _close_db(self) -> None:
+        """Закрыть текущее соединение с БД, если оно открыто."""
+        db = database_proxy.obj
+        if db and not db.is_closed():
+            db.close()
+
+    def _open_db(self, db_path: Path) -> None:
+        """Инициализировать прокси, убедиться в наличии таблиц и справочников."""
+        db = init_db(db_path)
+        db.create_tables(ALL_MODELS, safe=True)
+        seed_reference_data()
+        self._set_db_active(True)
+
     # ── Слоты: настройка БД ───────────────────────────────────────────────────
 
     def _on_db_create(self):
@@ -140,9 +171,10 @@ class MainWindow(QMainWindow):
         if not path.endswith('.db'):
             path += '.db'
         db_path = Path(path)
-        db_path.touch()
+        self._close_db()
         self._settings.db_path = db_path
-        self._set_db_active(True)
+        create_db(db_path)
+        self._open_db(db_path)
 
     def _on_db_open(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -151,7 +183,8 @@ class MainWindow(QMainWindow):
         if not path:
             return
         self._settings.db_path = Path(path)
-        self._set_db_active(True)
+        self._close_db()
+        self._open_db(Path(path))
 
     def _on_db_delete(self):
         db_path = self._settings.db_path
@@ -165,6 +198,7 @@ class MainWindow(QMainWindow):
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
+        self._close_db()
         try:
             db_path.unlink()
         except FileNotFoundError:
@@ -179,13 +213,25 @@ class MainWindow(QMainWindow):
     def _on_shelf_rename(self):      pass
     def _on_shelf_delete(self):      pass
     def _on_tab_close_requested(self, index: int): pass
-    def _on_book_add(self):          pass
+
+    def _on_book_add(self):
+        dlg = BookDialog(self)
+        dlg.exec()
+
     def _on_book_edit(self):         pass
     def _on_book_delete(self):       pass
     def _on_book_search(self):       pass
-    def _on_author_add(self):        pass
+
+    def _on_author_add(self):
+        dlg = AuthorDialog(self)
+        dlg.exec()
+
     def _on_author_edit(self):       pass
     def _on_author_delete(self):     pass
-    def _on_tag_add(self):           pass
+
+    def _on_tag_add(self):
+        dlg = TagDialog(self)
+        dlg.exec()
+
     def _on_tag_delete(self):        pass
     def _on_about(self):             pass
