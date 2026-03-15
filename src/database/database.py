@@ -1,16 +1,15 @@
 from pathlib import Path
-from peewee import Model, SqliteDatabase
+from peewee import Model, SqliteDatabase, DatabaseProxy
+
+database_proxy = DatabaseProxy()
 
 
-class DataBase:
-    db: SqliteDatabase
-
-
-def init_db(db_path: Path):
-    DataBase.db = SqliteDatabase(db_path)
+def init_db(db_path: Path) -> SqliteDatabase:
+    db = SqliteDatabase(db_path, pragmas={'journal_mode': 'wal', 'foreign_keys': 1})
+    database_proxy.initialize(db)
+    return db
 
 
 class BaseModel(Model):
     class Meta:
-        database = DataBase.db
-
+        database = database_proxy
