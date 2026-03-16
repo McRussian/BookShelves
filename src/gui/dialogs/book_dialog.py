@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
 from src.database.models.author import Author
 from src.database.models.book import Book, BookAuthor, BookGenre, BookTag
 from src.database.models.book_format import BookFormat
+from src.database.models.book_type import BookType
 from src.database.models.edition import Edition
 from src.database.models.publisher import Publisher
 from src.gui.dialogs.author_search_dialog import AuthorSearchDialog
@@ -62,6 +63,11 @@ class BookDialog(QDialog):
         pages_year_row.addWidget(self._year)
         pages_year_row.addStretch()
         form.addRow('', pages_year_row)
+
+        # Тип книги
+        self._book_type_combo = QComboBox()
+        self._fill_combo(self._book_type_combo, BookType.select().order_by(BookType.name), 'name')
+        form.addRow('Тип книги:', self._book_type_combo)
 
         # Издание и издательство — в одну строку
         ed_pub_row = QHBoxLayout()
@@ -193,6 +199,7 @@ class BookDialog(QDialog):
             file_size=file_size,
             pages=self._pages.value() or None,
             year=self._year.value() or None,
+            book_type=self._book_type_combo.currentData(),
             format=fmt,
             edition=self._edition_combo.currentData(),
             publisher=self._publisher_combo.currentData(),

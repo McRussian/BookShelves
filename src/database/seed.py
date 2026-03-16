@@ -1,11 +1,30 @@
 from __future__ import annotations
 
+from src.database.models.book_type import BookType
 from src.database.models.edition import Edition
 from src.database.models.genre import Genre
 
 _EDITIONS = [
     'Первое', 'Второе', 'Третье', 'Четвёртое', 'Пятое',
     'Шестое', 'Седьмое', 'Восьмое', 'Девятое', 'Десятое',
+]
+
+_BOOK_TYPES = [
+    'Роман',
+    'Повесть',
+    'Рассказ',
+    'Сборник рассказов',
+    'Поэзия',
+    'Поэма',
+    'Пьеса',
+    'Эссе',
+    'Биография',
+    'Мемуары',
+    'Дневник',
+    'Монография',
+    'Учебник',
+    'Справочник',
+    'Антология',
 ]
 
 # Дерево жанров: (название, [дочерние узлы, ...])
@@ -74,6 +93,9 @@ def seed_reference_data() -> None:
     """Заполнить справочники начальными данными (идемпотентно)."""
     for name in _EDITIONS:
         Edition.get_or_create(name=name)
+
+    for name in _BOOK_TYPES:
+        BookType.get_or_create(name=name)
 
     _seed_genres(_GENRES, parent=None)
 
