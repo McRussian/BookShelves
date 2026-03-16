@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QDialog, QDialogButtonBox, QHBoxLayout, QLineEdit,
-    QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+    QMessageBox, QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
 )
 
 from src.database.models.tag import Tag
@@ -30,10 +30,15 @@ class TagSearchDialog(QDialog):
         self._tree = QTreeWidget()
         self._tree.setHeaderHidden(True)
         self._tree.setRootIsDecorated(True)
+        self._tree.itemChanged.connect(self._on_item_changed)
         layout.addWidget(self._tree, stretch=1)
 
         new_btn = QPushButton('+ Создать новый тег')
         new_btn.clicked.connect(self._on_create_tag)
+
+        self._delete_btn = QPushButton('Удалить')
+        self._delete_btn.setEnabled(False)
+        self._delete_btn.clicked.connect(self._on_delete)
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok |
@@ -44,6 +49,7 @@ class TagSearchDialog(QDialog):
 
         bottom = QHBoxLayout()
         bottom.addWidget(new_btn)
+        bottom.addWidget(self._delete_btn)
         bottom.addStretch()
         bottom.addWidget(buttons)
         layout.addLayout(bottom)
@@ -57,6 +63,7 @@ class TagSearchDialog(QDialog):
     # ── Заполнение дерева ─────────────────────────────────────────────────────
 
     def _populate_grouped(self, tags) -> None:
+        self._tree.blockSignals(True)
         self._tree.clear()
         groups: dict[str, QTreeWidgetItem] = {}
         bold = QFont()
@@ -72,15 +79,25 @@ class TagSearchDialog(QDialog):
                 groups[letter] = group_item
             self._add_tag_item(groups[letter], tag)
 
+        self._tree.blockSignals(False)
+        self._update_delete_btn()
+
     def _populate_flat(self, tags) -> None:
+        self._tree.blockSignals(True)
         self._tree.clear()
         for tag in tags:
             self._add_tag_item(self._tree.invisibleRootItem(), tag)
+        self._tree.blockSignals(False)
+        self._update_delete_btn()
 
     def _add_tag_item(self, parent: QTreeWidgetItem, tag: Tag) -> None:
         item = QTreeWidgetItem(parent, [tag.name])
         item.setData(0, Qt.ItemDataRole.UserRole, tag)
-        item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+        item.setFlags(
+            Qt.ItemFlag.ItemIsSelectable |
+            Qt.ItemFlag.ItemIsEnabled |
+            Qt.ItemFlag.ItemIsUserCheckable
+        )
         item.setCheckState(
             0,
             Qt.CheckState.Checked
@@ -88,7 +105,31 @@ class TagSearchDialog(QDialog):
             else Qt.CheckState.Unchecked,
         )
 
+    def _checked_tags(self) -> list[Tag]:
+        """Все теги с установленной галочкой."""
+        result = []
+        root = self._tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            top = root.child(i)
+            tag = top.data(0, Qt.ItemDataRole.UserRole)
+            if tag is not None:
+                if top.checkState(0) == Qt.CheckState.Checked:
+                    result.append(tag)
+            else:
+                for j in range(top.childCount()):
+                    child = top.child(j)
+                    if child.checkState(0) == Qt.CheckState.Checked:
+                        result.append(child.data(0, Qt.ItemDataRole.UserRole))
+        return result
+
     # ── Слоты ────────────────────────────────────────────────────────────────
+
+    def _on_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
+        if column == 0 and item.data(0, Qt.ItemDataRole.UserRole) is not None:
+            self._update_delete_btn()
+
+    def _update_delete_btn(self) -> None:
+        self._delete_btn.setEnabled(bool(self._checked_tags()))
 
     def _on_search(self, text: str) -> None:
         text = text.strip()
@@ -104,18 +145,23 @@ class TagSearchDialog(QDialog):
             self._preselected_ids.add(new_tag.id)
             self._on_search(self._search.text())
 
+    def _on_delete(self) -> None:
+        tags = self._checked_tags()
+        if not tags:
+            return
+        names = '\n'.join(t.name for t in tags)
+        reply = QMessageBox.question(
+            self, 'Удаление',
+            f'Удалить из базы данных?\n\n{names}',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        for tag in tags:
+            self._preselected_ids.discard(tag.id)
+            tag.delete_instance()
+        self._on_search(self._search.text())
+
     def _on_accept(self) -> None:
-        self._selected = []
-        root = self._tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            top = root.child(i)
-            tag = top.data(0, Qt.ItemDataRole.UserRole)
-            if tag is not None:
-                if top.checkState(0) == Qt.CheckState.Checked:
-                    self._selected.append(tag)
-            else:
-                for j in range(top.childCount()):
-                    child = top.child(j)
-                    if child.checkState(0) == Qt.CheckState.Checked:
-                        self._selected.append(child.data(0, Qt.ItemDataRole.UserRole))
+        self._selected = self._checked_tags()
         self.accept()
