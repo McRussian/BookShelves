@@ -1,4 +1,4 @@
-from peewee import AutoField, CharField, ForeignKeyField
+from peewee import AutoField, CharField, fn, ForeignKeyField, ModelSelect
 
 from src.database.database import BaseModel
 
@@ -10,3 +10,8 @@ class Genre(BaseModel):
 
     class Meta:
         db_table = 'genres'
+
+    @classmethod
+    def search(cls, query: str) -> ModelSelect:
+        """Поиск по названию жанра, без учёта регистра, по подстроке."""
+        return cls.select().where(fn.LOWER(cls.name).contains(query.lower()))

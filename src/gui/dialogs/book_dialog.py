@@ -13,6 +13,7 @@ from src.database.models.book_format import BookFormat
 from src.database.models.edition import Edition
 from src.database.models.publisher import Publisher
 from src.gui.dialogs.author_search_dialog import AuthorSearchDialog
+from src.gui.dialogs.genre_search_dialog import GenreSearchDialog
 from src.gui.dialogs.tag_search_dialog import TagSearchDialog
 from src.gui.widgets.chips_widget import ChipsWidget
 
@@ -111,9 +112,9 @@ class BookDialog(QDialog):
         genres_col.addWidget(QLabel('Жанры:'))
         self._genres_chips = ChipsWidget()
         genres_col.addWidget(self._genres_chips)
-        add_genre_btn = QPushButton('+ Добавить жанр')
-        add_genre_btn.clicked.connect(self._on_add_genre)
-        genres_col.addWidget(add_genre_btn)
+        select_genres_btn = QPushButton('Выбрать жанры...')
+        select_genres_btn.clicked.connect(self._on_select_genres)
+        genres_col.addWidget(select_genres_btn)
 
         tags_genres_row.addLayout(tags_col)
         tags_genres_row.addLayout(genres_col)
@@ -163,8 +164,11 @@ class BookDialog(QDialog):
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._tags_chips.set_items([(t.name, t) for t in dlg.selected_tags])
 
-    def _on_add_genre(self) -> None:
-        pass  # будет реализовано: диалог поиска/выбора жанра
+    def _on_select_genres(self) -> None:
+        current = self._genres_chips.all_data()
+        dlg = GenreSearchDialog(current, self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            self._genres_chips.set_items([(g.name, g) for g in dlg.selected_genres])
 
     def _on_accept(self) -> None:
         title = self._title.text().strip()
