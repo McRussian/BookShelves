@@ -1,4 +1,5 @@
 src/database/__pycache__/*
+src/database/models/__pycache__/*
 src/gui/__pycache__/*
 .idea/*
 src/__pycache__/*

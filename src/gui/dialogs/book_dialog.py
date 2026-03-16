@@ -12,8 +12,8 @@ from src.database.models.book import Book, BookAuthor, BookGenre, BookTag
 from src.database.models.book_format import BookFormat
 from src.database.models.edition import Edition
 from src.database.models.publisher import Publisher
-from src.gui.dialogs.author_dialog import AuthorDialog
-from src.gui.dialogs.tag_dialog import TagDialog
+from src.gui.dialogs.author_search_dialog import AuthorSearchDialog
+from src.gui.dialogs.tag_search_dialog import TagSearchDialog
 from src.gui.widgets.chips_widget import ChipsWidget
 
 
@@ -90,12 +90,9 @@ class BookDialog(QDialog):
         layout.addWidget(self._authors_list)
 
         authors_row = QHBoxLayout()
-        add_author_btn = QPushButton('+ Добавить автора')
-        add_author_btn.clicked.connect(self._on_add_author)
-        remove_author_btn = QPushButton('− Убрать')
-        remove_author_btn.clicked.connect(self._on_remove_author)
-        authors_row.addWidget(add_author_btn)
-        authors_row.addWidget(remove_author_btn)
+        select_authors_btn = QPushButton('Выбрать авторов...')
+        select_authors_btn.clicked.connect(self._on_select_authors)
+        authors_row.addWidget(select_authors_btn)
         authors_row.addStretch()
         layout.addLayout(authors_row)
 
@@ -106,9 +103,9 @@ class BookDialog(QDialog):
         tags_col.addWidget(QLabel('Теги:'))
         self._tags_chips = ChipsWidget()
         tags_col.addWidget(self._tags_chips)
-        add_tag_btn = QPushButton('+ Добавить тег')
-        add_tag_btn.clicked.connect(self._on_add_tag)
-        tags_col.addWidget(add_tag_btn)
+        select_tags_btn = QPushButton('Выбрать теги...')
+        select_tags_btn.clicked.connect(self._on_select_tags)
+        tags_col.addWidget(select_tags_btn)
 
         genres_col = QVBoxLayout()
         genres_col.addWidget(QLabel('Жанры:'))
@@ -152,24 +149,19 @@ class BookDialog(QDialog):
         if path:
             self._file_path.setText(path)
 
-    def _on_add_author(self) -> None:
-        dlg = AuthorDialog(self)
+    def _on_select_authors(self) -> None:
+        dlg = AuthorSearchDialog(self._authors, self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
-            author = dlg.author
-            self._authors.append(author)
-            self._authors_list.addItem(author.display_name)
+            self._authors = dlg.selected_authors
+            self._authors_list.clear()
+            for author in self._authors:
+                self._authors_list.addItem(author.display_name)
 
-    def _on_remove_author(self) -> None:
-        row = self._authors_list.currentRow()
-        if row >= 0:
-            self._authors.pop(row)
-            self._authors_list.takeItem(row)
-
-    def _on_add_tag(self) -> None:
-        dlg = TagDialog(self)
+    def _on_select_tags(self) -> None:
+        current = self._tags_chips.all_data()
+        dlg = TagSearchDialog(current, self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
-            tag = dlg.tag
-            self._tags_chips.add_item(tag.name, tag)
+            self._tags_chips.set_items([(t.name, t) for t in dlg.selected_tags])
 
     def _on_add_genre(self) -> None:
         pass  # будет реализовано: диалог поиска/выбора жанра

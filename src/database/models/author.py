@@ -1,4 +1,4 @@
-from peewee import AutoField, CharField, ForeignKeyField, JOIN, ModelSelect
+from peewee import AutoField, CharField, fn, ForeignKeyField, JOIN, ModelSelect
 
 from src.database.database import BaseModel
 
@@ -45,19 +45,19 @@ class Author(BaseModel):
 
     @classmethod
     def search(cls, query: str) -> ModelSelect:
-        """Поиск по ФИО и псевдонимам. Возвращает запрос, можно дополнять."""
-        return (
-            cls
-            .select()
-            .join(AuthorAlias, JOIN.LEFT_OUTER)
-            .where(
-                cls.firstname.contains(query) |
-                cls.lastname.contains(query) |
-                cls.surname.contains(query) |
-                AuthorAlias.alias.contains(query)
+        """Поиск по имени, фамилии и псевдонимам, без учёта регистра, по подстроке.
+
+        Запрос разбивается на слова: каждое слово должно встретиться хотя бы
+        в одном из полей. Пример: «лев тол» найдёт Льва Толстого.
+        """
+        qs = cls.select().join(AuthorAlias, JOIN.LEFT_OUTER)
+        for word in query.lower().split():
+            qs = qs.where(
+                fn.LOWER(cls.firstname).contains(word) |
+                fn.LOWER(cls.lastname).contains(word) |
+                fn.LOWER(AuthorAlias.alias).contains(word)
             )
-            .distinct()
-        )
+        return qs.distinct()
 
 
 class AuthorAlias(BaseModel):
