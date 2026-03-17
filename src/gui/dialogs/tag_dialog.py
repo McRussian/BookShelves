@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 
 from src.database.models.tag import Tag
 from src.gui.app_signals import app_signals
+from src.utils.normalize import normalize_tag
 
 
 class TagDialog(QDialog):
@@ -36,10 +37,11 @@ class TagDialog(QDialog):
         return self._tag
 
     def _on_accept(self) -> None:
-        name = self._name_edit.text().strip()
-        if not name:
+        raw = self._name_edit.text().strip()
+        if not raw:
             QMessageBox.warning(self, 'Ошибка', 'Введите название тега.')
             return
+        name = normalize_tag(raw)
         if Tag.get_or_none(Tag.name == name):
             QMessageBox.warning(self, 'Ошибка', f'Тег «{name}» уже существует.')
             return

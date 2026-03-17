@@ -4,10 +4,9 @@ from PyQt6.QtWidgets import (
     QPushButton, QTextEdit, QVBoxLayout,
 )
 
-from peewee import fn
-
 from src.database.models.author import Author, AuthorAlias
 from src.gui.app_signals import app_signals
+from src.utils.normalize import normalize_name
 
 
 class AuthorDialog(QDialog):
@@ -97,15 +96,18 @@ class AuthorDialog(QDialog):
             self._aliases_list.takeItem(row)
 
     def _on_accept(self) -> None:
-        firstname = self._firstname.text().strip()
-        if not firstname:
+        raw_firstname = self._firstname.text().strip()
+        if not raw_firstname:
             QMessageBox.warning(self, 'Ошибка', 'Введите имя автора.')
             return
 
-        lastname = self._lastname.text().strip() or None
+        firstname = normalize_name(raw_firstname)
+        lastname  = normalize_name(self._lastname.text()) or None
+        surname   = normalize_name(self._surname.text()) or None
+
         duplicate = Author.get_or_none(
-            (fn.LOWER(Author.firstname) == firstname.lower()) &
-            (fn.LOWER(Author.lastname) == (lastname or '').lower())
+            (Author.firstname == firstname) &
+            (Author.lastname == (lastname or ''))
         )
         if duplicate:
             reply = QMessageBox.question(
@@ -119,11 +121,11 @@ class AuthorDialog(QDialog):
         self._author = Author.create(
             firstname=firstname,
             lastname=lastname,
-            surname=self._surname.text().strip() or None,
+            surname=surname,
             comment=self._comment.toPlainText().strip() or None,
         )
         for alias in self._aliases:
-            AuthorAlias.create(author=self._author, alias=alias)
+            AuthorAlias.create(author=self._author, alias=normalize_name(alias))
 
         app_signals.db_changed.emit()
         self.accept()

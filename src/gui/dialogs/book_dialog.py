@@ -15,6 +15,7 @@ from src.database.models.book_type import BookType
 from src.database.models.edition import Edition
 from src.database.models.publisher import Publisher
 from src.gui.app_signals import app_signals
+from src.utils.normalize import normalize_title
 from src.gui.dialogs.author_search_dialog import AuthorSearchDialog
 from src.gui.dialogs.genre_search_dialog import GenreSearchDialog
 from src.gui.dialogs.tag_search_dialog import TagSearchDialog
@@ -179,10 +180,11 @@ class BookDialog(QDialog):
             self._genres_chips.set_items([(g.name, g) for g in dlg.selected_genres])
 
     def _on_accept(self) -> None:
-        title = self._title.text().strip()
-        if not title:
+        raw_title = self._title.text().strip()
+        if not raw_title:
             QMessageBox.warning(self, 'Ошибка', 'Введите название книги.')
             return
+        title = normalize_title(raw_title)
 
         file_path = self._file_path.text()
         if not file_path:

@@ -71,7 +71,8 @@ class TagSearchDialog(QDialog):
         bold.setBold(True)
 
         for tag in tags:
-            letter = (tag.name or '?')[0].upper()
+            name = tag.name or '?'
+            letter = name[1].upper() if name.startswith('#') and len(name) > 1 else name[0].upper()
             if letter not in groups:
                 group_item = QTreeWidgetItem(self._tree, [letter])
                 group_item.setFont(0, bold)
