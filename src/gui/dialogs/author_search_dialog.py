@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.database.models.author import Author
+from src.gui.app_signals import app_signals
 from src.gui.dialogs.author_dialog import AuthorDialog
 
 
@@ -160,6 +161,7 @@ class AuthorSearchDialog(QDialog):
         for author in authors:
             self._preselected_ids.discard(author.id)
             author.delete_instance()
+        app_signals.db_changed.emit()
         self._on_search(self._search.text())
 
     def _on_accept(self) -> None:

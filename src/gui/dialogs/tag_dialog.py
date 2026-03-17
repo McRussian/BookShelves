@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.database.models.tag import Tag
+from src.gui.app_signals import app_signals
 
 
 class TagDialog(QDialog):
@@ -43,4 +44,5 @@ class TagDialog(QDialog):
             QMessageBox.warning(self, 'Ошибка', f'Тег «{name}» уже существует.')
             return
         self._tag = Tag.create(name=name)
+        app_signals.db_changed.emit()
         self.accept()

@@ -64,7 +64,6 @@ class GenreSearchDialog(QDialog):
                 Qt.CheckState.Checked if root.id in self._preselected_ids
                 else Qt.CheckState.Unchecked,
             )
-            root_item.setExpanded(True)
             self._add_children(root_item, root)
 
     def _add_children(self, parent_item: QTreeWidgetItem, parent_genre: Genre) -> None:
@@ -78,7 +77,6 @@ class GenreSearchDialog(QDialog):
                 Qt.CheckState.Checked if genre.id in self._preselected_ids
                 else Qt.CheckState.Unchecked,
             )
-            item.setExpanded(True)
             self._add_children(item, genre)
 
     def _populate_flat(self, genres) -> None:

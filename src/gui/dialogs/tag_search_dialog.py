@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.database.models.tag import Tag
+from src.gui.app_signals import app_signals
 from src.gui.dialogs.tag_dialog import TagDialog
 
 
@@ -15,7 +16,7 @@ class TagSearchDialog(QDialog):
     def __init__(self, preselected: list[Tag], parent=None):
         super().__init__(parent)
         self.setWindowTitle('Выбор тегов')
-        self.setMinimumSize(360, 420)
+        self.setMinimumSize(440, 420)
 
         self._preselected_ids = {t.id for t in preselected}
         self._selected: list[Tag] = []
@@ -160,6 +161,7 @@ class TagSearchDialog(QDialog):
         for tag in tags:
             self._preselected_ids.discard(tag.id)
             tag.delete_instance()
+        app_signals.db_changed.emit()
         self._on_search(self._search.text())
 
     def _on_accept(self) -> None:

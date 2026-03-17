@@ -6,10 +6,14 @@ from PyQt6.QtWidgets import (
     QFileDialog, QMainWindow, QMenuBar, QMessageBox,
     QTabWidget, QToolBar, QVBoxLayout, QWidget,
 )
+from peewee import fn
 
 from src.database.database import create_db, database_proxy, init_db
 from src.database.models import ALL_MODELS
+from src.database.models.author import Author
+from src.database.models.book import Book
 from src.database.seed import seed_reference_data
+from src.gui.app_signals import app_signals
 from src.gui.dialogs.author_dialog import AuthorDialog
 from src.gui.dialogs.book_dialog import BookDialog
 from src.gui.dialogs.tag_dialog import TagDialog
@@ -149,6 +153,10 @@ class MainWindow(QMainWindow):
 
     def _close_db(self) -> None:
         """Закрыть текущее соединение с БД, если оно открыто."""
+        try:
+            app_signals.db_changed.disconnect(self._refresh_stats)
+        except RuntimeError:
+            pass
         db = database_proxy.obj
         if db and not db.is_closed():
             db.close()
@@ -158,7 +166,15 @@ class MainWindow(QMainWindow):
         db = init_db(db_path)
         db.create_tables(ALL_MODELS, safe=True)
         seed_reference_data()
+        app_signals.db_changed.connect(self._refresh_stats)
         self._set_db_active(True)
+        self._refresh_stats()
+
+    def _refresh_stats(self) -> None:
+        books = Book.select().count()
+        authors = Author.select().count()
+        size = Book.select(fn.SUM(Book.file_size)).scalar() or 0
+        self.stats_bar.update_stats(books, authors, size)
 
     # ── Слоты: настройка БД ───────────────────────────────────────────────────
 

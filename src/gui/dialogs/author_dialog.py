@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.database.models.author import Author, AuthorAlias
+from src.gui.app_signals import app_signals
 
 
 class AuthorDialog(QDialog):
@@ -108,4 +109,5 @@ class AuthorDialog(QDialog):
         for alias in self._aliases:
             AuthorAlias.create(author=self._author, alias=alias)
 
+        app_signals.db_changed.emit()
         self.accept()

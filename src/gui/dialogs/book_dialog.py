@@ -13,6 +13,7 @@ from src.database.models.book_format import BookFormat
 from src.database.models.book_type import BookType
 from src.database.models.edition import Edition
 from src.database.models.publisher import Publisher
+from src.gui.app_signals import app_signals
 from src.gui.dialogs.author_search_dialog import AuthorSearchDialog
 from src.gui.dialogs.genre_search_dialog import GenreSearchDialog
 from src.gui.dialogs.tag_search_dialog import TagSearchDialog
@@ -215,4 +216,5 @@ class BookDialog(QDialog):
         for genre in self._genres_chips.all_data():
             BookGenre.create(book=self._book, genre=genre)
 
+        app_signals.db_changed.emit()
         self.accept()
