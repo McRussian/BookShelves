@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from peewee import fn
 from PyQt6.QtWidgets import (
     QComboBox, QDialog, QDialogButtonBox, QFileDialog,
     QFormLayout, QHBoxLayout, QLabel, QLineEdit,
@@ -188,6 +189,24 @@ class BookDialog(QDialog):
             QMessageBox.warning(self, 'Ошибка', 'Выберите файл книги.')
             return
 
+        if Book.get_or_none(Book.file_path == file_path):
+            QMessageBox.warning(
+                self, 'Дубликат',
+                f'Книга с таким файлом уже есть в библиотеке:\n{file_path}',
+            )
+            return
+
+        duplicates = self._find_similar_books(title)
+        if duplicates:
+            names = '\n'.join(self._book_description(b) for b in duplicates)
+            reply = QMessageBox.question(
+                self, 'Возможный дубликат',
+                f'В библиотеке уже есть похожая книга:\n\n{names}\n\nДобавить ещё одну?',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
         p = Path(file_path)
         file_size = p.stat().st_size if p.exists() else None
 
@@ -218,3 +237,28 @@ class BookDialog(QDialog):
 
         app_signals.db_changed.emit()
         self.accept()
+
+    def _find_similar_books(self, title: str) -> list[Book]:
+        """Ищет книги с совпадающим названием + годом (если указан) + общим автором (если выбраны)."""
+        query = Book.select().where(fn.LOWER(Book.title) == title.lower())
+
+        year_val = self._year.value()
+        if year_val:
+            query = query.where(Book.year == year_val)
+
+        if self._authors:
+            author_ids = [a.id for a in self._authors]
+            query = (
+                query
+                .join(BookAuthor)
+                .where(BookAuthor.author_id.in_(author_ids))
+            )
+
+        return list(query)
+
+    @staticmethod
+    def _book_description(book: Book) -> str:
+        authors = [ba.author.display_name for ba in book.book_authors]
+        authors_str = ', '.join(authors) if authors else 'автор не указан'
+        year_str = f', {book.year}' if book.year else ''
+        return f'«{book.title}» — {authors_str}{year_str}'

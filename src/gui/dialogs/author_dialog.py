@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (
     QPushButton, QTextEdit, QVBoxLayout,
 )
 
+from peewee import fn
+
 from src.database.models.author import Author, AuthorAlias
 from src.gui.app_signals import app_signals
 
@@ -100,9 +102,23 @@ class AuthorDialog(QDialog):
             QMessageBox.warning(self, 'Ошибка', 'Введите имя автора.')
             return
 
+        lastname = self._lastname.text().strip() or None
+        duplicate = Author.get_or_none(
+            (fn.LOWER(Author.firstname) == firstname.lower()) &
+            (fn.LOWER(Author.lastname) == (lastname or '').lower())
+        )
+        if duplicate:
+            reply = QMessageBox.question(
+                self, 'Возможный дубликат',
+                f'Автор «{duplicate.display_name}» уже существует.\n\nДобавить ещё одного?',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
         self._author = Author.create(
             firstname=firstname,
-            lastname=self._lastname.text().strip() or None,
+            lastname=lastname,
             surname=self._surname.text().strip() or None,
             comment=self._comment.toPlainText().strip() or None,
         )
