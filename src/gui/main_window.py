@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 from peewee import fn
 
 from src.database.database import create_db, database_proxy, init_db
+from src.database.migrations import run_migrations
 from src.database.models import ALL_MODELS
 from src.database.models.author import Author
 from src.database.models.book import Book
@@ -165,6 +166,7 @@ class MainWindow(QMainWindow):
         """Инициализировать прокси, убедиться в наличии таблиц и справочников."""
         db = init_db(db_path)
         db.create_tables(ALL_MODELS, safe=True)
+        run_migrations(db)
         seed_reference_data()
         app_signals.db_changed.connect(self._refresh_stats)
         self._set_db_active(True)
