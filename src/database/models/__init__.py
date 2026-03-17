@@ -6,6 +6,7 @@ from src.database.models.edition import Edition
 from src.database.models.genre import Genre
 from src.database.models.publisher import Publisher
 from src.database.models.tag import Tag
+from src.database.models.user import User
 
 ALL_MODELS = [
     Author,
@@ -20,4 +21,5 @@ ALL_MODELS = [
     BookAuthor,
     BookGenre,
     BookTag,
+    User,
 ]

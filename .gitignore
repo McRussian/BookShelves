@@ -6,3 +6,4 @@ src/__pycache__/*
 src/gui/dialogs/__pycache__/*
 src/gui/widgets/__pycache__/*
 tests/__pycache__/*
+migrations/__pycache__/*

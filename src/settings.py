@@ -9,6 +9,7 @@ class Settings:
 
     _KEY_DB_PATH = 'database/path'
     _KEY_FILE_READERS = 'readers/list'
+    _KEY_LAST_USER_ID = 'user/last_id'
 
     def __init__(self):
         self._qs = QSettings(self._ORG, self._APP)
@@ -26,6 +27,20 @@ class Settings:
             self._qs.remove(self._KEY_DB_PATH)
         else:
             self._qs.setValue(self._KEY_DB_PATH, str(path))
+
+    # ── Пользователь ─────────────────────────────────────────────────────────
+
+    @property
+    def last_user_id(self) -> int | None:
+        value = self._qs.value(self._KEY_LAST_USER_ID)
+        return int(value) if value is not None else None
+
+    @last_user_id.setter
+    def last_user_id(self, user_id: int | None) -> None:
+        if user_id is None:
+            self._qs.remove(self._KEY_LAST_USER_ID)
+        else:
+            self._qs.setValue(self._KEY_LAST_USER_ID, user_id)
 
     # ── Ридеры ────────────────────────────────────────────────────────────────
 

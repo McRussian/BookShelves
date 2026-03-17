@@ -1,10 +1,10 @@
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QCloseEvent
+from PyQt6.QtGui import QAction, QCloseEvent, QIcon
 from PyQt6.QtWidgets import (
     QFileDialog, QMainWindow, QMenuBar, QMessageBox,
-    QTabWidget, QToolBar, QVBoxLayout, QWidget,
+    QSizePolicy, QTabWidget, QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 from peewee import fn
 
@@ -13,11 +13,14 @@ from src.database.migrations import run_migrations
 from src.database.models import ALL_MODELS
 from src.database.models.author import Author
 from src.database.models.book import Book
+from src.database.models.user import User
 from src.database.seed import seed_reference_data
 from src.gui.app_signals import app_signals
 from src.gui.dialogs.author_dialog import AuthorDialog
 from src.gui.dialogs.book_dialog import BookDialog
 from src.gui.dialogs.tag_dialog import TagDialog
+from src.gui.dialogs.user_dialog import UserDialog
+from src.gui.dialogs.user_select_dialog import UserSelectDialog
 from src.gui.stats_bar import StatsBar
 from src.settings import Settings
 
@@ -30,6 +33,7 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(800, 600)
 
         self._settings = Settings()
+        self._current_user: User | None = None
 
         self._setup_menu()
         self._setup_toolbar()
@@ -82,14 +86,24 @@ class MainWindow(QMainWindow):
         tags_menu.addAction(self._action('Добавить тег', self._on_tag_add))
         tags_menu.addAction(self._action('Удалить тег',  self._on_tag_delete))
 
+        # Пользователи
+        self._users_menu = menubar.addMenu('Пользователи')
+        self._users_menu.addAction(self._action('Добавить пользователя', self._on_user_add))
+        self._users_menu.addAction(self._action('Удалить пользователя',  self._on_user_delete))
+        self._users_menu.addAction(self._action('Статистика',            self._on_user_stats))
+        self._users_menu.addSeparator()
+        self._users_menu.addAction(self._action('Сменить пользователя',  self._on_user_switch))
+
         # О приложении — правый угол
         corner_bar = QMenuBar(self)
         about_menu = corner_bar.addMenu('О приложении')
         about_menu.addAction(self._action('О программе', self._on_about))
         menubar.setCornerWidget(corner_bar, Qt.Corner.TopRightCorner)
 
-        self._apply_menubar_style(menubar, corner_bar,
-                                  titles=('Настройка', 'База данных', 'О приложении'))
+        self._apply_menubar_style(
+            menubar, corner_bar,
+            titles=('Настройка', 'База данных', 'Пользователи', 'О приложении'),
+        )
 
     # ── Панель инструментов ───────────────────────────────────────────────────
 
@@ -102,6 +116,20 @@ class MainWindow(QMainWindow):
         self._toolbar.addAction(self._action('Поиск',          self._on_book_search))
         self._toolbar.addSeparator()
         self._toolbar.addAction(self._action('Добавить полку', self._on_shelf_add))
+        self._toolbar.addSeparator()
+
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._toolbar.addWidget(spacer)
+
+        self._user_btn = QToolButton()
+        self._user_btn.setIcon(QIcon.fromTheme(
+            'system-log-out',
+            self.style().standardIcon(self.style().StandardPixmap.SP_DialogCloseButton),
+        ))
+        self._user_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self._user_btn.clicked.connect(self._on_user_switch)
+        self._toolbar.addWidget(self._user_btn)
 
     # ── Центральная область ───────────────────────────────────────────────────
 
@@ -128,10 +156,23 @@ class MainWindow(QMainWindow):
         super().closeEvent(event)
 
     def _set_db_active(self, active: bool) -> None:
-        """Показывает или скрывает элементы, зависящие от наличия открытой БД."""
         self._db_menu.setEnabled(active)
+        self._users_menu.setEnabled(active)
         self._toolbar.setVisible(active)
         self.stats_bar.setVisible(active)
+
+    def _logout(self) -> None:
+        """Очистить UI текущего пользователя."""
+        self._current_user = None
+        self._user_btn.setText('')
+        self.shelf_tabs.clear()
+
+    def _login(self, user: User) -> None:
+        """Загрузить UI для выбранного пользователя."""
+        self._current_user = user
+        self._settings.last_user_id = user.id
+        self._user_btn.setText(f'  {user.login}')
+        app_signals.user_changed.emit(user)
 
     def _apply_menubar_style(self, *menubars: QMenuBar, titles: tuple[str, ...]) -> None:
         fm = self.menuBar().fontMetrics()
@@ -150,10 +191,9 @@ class MainWindow(QMainWindow):
         index = self.shelf_tabs.addTab(widget, name)
         self.shelf_tabs.setCurrentIndex(index)
 
-    # ── Вспомогательный метод открытия/подключения БД ────────────────────────
+    # ── Открытие / закрытие БД ────────────────────────────────────────────────
 
     def _close_db(self) -> None:
-        """Закрыть текущее соединение с БД, если оно открыто."""
         try:
             app_signals.db_changed.disconnect(self._refresh_stats)
         except RuntimeError:
@@ -163,7 +203,6 @@ class MainWindow(QMainWindow):
             db.close()
 
     def _open_db(self, db_path: Path) -> None:
-        """Инициализировать прокси, убедиться в наличии таблиц и справочников."""
         db = init_db(db_path)
         db.create_tables(ALL_MODELS, safe=True)
         run_migrations(db)
@@ -171,6 +210,11 @@ class MainWindow(QMainWindow):
         app_signals.db_changed.connect(self._refresh_stats)
         self._set_db_active(True)
         self._refresh_stats()
+        self._select_user_on_open()
+
+    def _select_user_on_open(self) -> None:
+        """Показывает диалог выбора пользователя с предвыбранным последним."""
+        self._on_user_switch()
 
     def _refresh_stats(self) -> None:
         books = Book.select().count()
@@ -222,7 +266,23 @@ class MainWindow(QMainWindow):
         except FileNotFoundError:
             pass
         self._settings.db_path = None
+        self._current_user = None
         self._set_db_active(False)
+
+    # ── Слоты: пользователи ───────────────────────────────────────────────────
+
+    def _on_user_add(self):
+        dlg = UserDialog(self)
+        dlg.exec()
+
+    def _on_user_switch(self):
+        self._logout()
+        dlg = UserSelectDialog(self._settings.last_user_id, self)
+        if dlg.exec() == UserSelectDialog.DialogCode.Accepted:
+            self._login(dlg.selected_user)
+
+    def _on_user_delete(self):  pass
+    def _on_user_stats(self):   pass
 
     # ── Слоты (заглушки) ──────────────────────────────────────────────────────
 
