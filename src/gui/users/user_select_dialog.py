@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.database.models.user import User
-from src.gui.dialogs.user_dialog import UserDialog
+from src.gui.users.user_dialog import UserDialog
 
 
 class UserSelectDialog(QDialog):

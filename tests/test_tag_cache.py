@@ -5,7 +5,7 @@ from peewee import SqliteDatabase
 
 from src.database.database import database_proxy
 from src.database.models.tag import Tag
-from src.gui.widgets.tag_list_widget import build_search_results, filter_tags
+from src.gui.tags.tag_list_widget import build_search_results, filter_tags
 
 
 def _tag(name: str, tag_id: int = 0) -> SimpleNamespace:

@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
 
 from src.database.models.author import Author
 from src.gui.app_signals import app_signals
-from src.gui.dialogs.author_dialog import AuthorDialog
+from src.gui.authors.author_dialog import AuthorDialog
 
 
 class AuthorSearchDialog(QDialog):

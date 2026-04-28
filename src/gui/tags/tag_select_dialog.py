@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout
 
 from src.database.models.tag import Tag
-from src.gui.widgets.tag_select_widget import TagSelectWidget
+from src.gui.tags.tag_select_widget import TagSelectWidget
 
 
 class TagSelectDialog(QDialog):

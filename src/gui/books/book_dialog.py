@@ -16,9 +16,9 @@ from src.database.models.edition import Edition
 from src.database.models.publisher import Publisher
 from src.gui.app_signals import app_signals
 from src.utils.normalize import normalize_title
-from src.gui.dialogs.author_search_dialog import AuthorSearchDialog
-from src.gui.dialogs.genre_search_dialog import GenreSearchDialog
-from src.gui.dialogs.tag_select_dialog import TagSelectDialog
+from src.gui.authors.author_search_dialog import AuthorSearchDialog
+from src.gui.genres.genre_search_dialog import GenreSearchDialog
+from src.gui.tags.tag_select_dialog import TagSelectDialog
 from src.gui.widgets.chips_widget import ChipsWidget
 
 

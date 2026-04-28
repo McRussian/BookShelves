@@ -16,13 +16,13 @@ from src.database.models.book import Book
 from src.database.models.user import User
 from src.database.seed import seed_reference_data
 from src.gui.app_signals import app_signals
-from src.gui.dialogs.author_dialog import AuthorDialog
-from src.gui.dialogs.book_dialog import BookDialog
-from src.gui.dialogs.tag_dialog import TagDialog
-from src.gui.dialogs.tag_manage_dialog import TagManageDialog
-from src.gui.dialogs.user_dialog import UserDialog
-from src.gui.dialogs.user_select_dialog import UserSelectDialog
-from src.gui.stats_bar import StatsBar
+from src.gui.authors.author_dialog import AuthorDialog
+from src.gui.books.book_dialog import BookDialog
+from src.gui.tags.tag_dialog import TagDialog
+from src.gui.tags.tag_manage_dialog import TagManageDialog
+from src.gui.users.user_dialog import UserDialog
+from src.gui.users.user_select_dialog import UserSelectDialog
+from src.gui.widgets.stats_bar import StatsBar
 from src.settings import Settings
 
 

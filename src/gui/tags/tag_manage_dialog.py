@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout
 
-from src.gui.widgets.tag_manage_widget import TagManageWidget
+from src.gui.tags.tag_manage_widget import TagManageWidget
 
 
 class TagManageDialog(QDialog):

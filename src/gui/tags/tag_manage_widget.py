@@ -1,4 +1,4 @@
-from src.gui.widgets.tag_checkable_widget import TagCheckableWidget
+from src.gui.tags.tag_checkable_widget import TagCheckableWidget
 
 
 class TagManageWidget(TagCheckableWidget):

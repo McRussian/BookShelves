@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import (
 
 from src.database.models.tag import Tag
 from src.gui.app_signals import app_signals
-from src.gui.dialogs.tag_dialog import TagDialog
-from src.gui.widgets.tag_list_widget import TagListWidget, build_search_results
+from src.gui.tags.tag_dialog import TagDialog
+from src.gui.tags.tag_list_widget import TagListWidget, build_search_results
 
 
 class TagCheckableWidget(TagListWidget):
