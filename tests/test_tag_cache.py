@@ -5,7 +5,7 @@ from peewee import SqliteDatabase
 
 from src.database.database import database_proxy
 from src.database.models.tag import Tag
-from src.gui.dialogs.tag_search_dialog import filter_tags
+from src.gui.dialogs.tag_search_dialog import build_search_results, filter_tags
 
 
 def _tag(name: str, tag_id: int = 0) -> SimpleNamespace:
@@ -52,6 +52,51 @@ class TestFilterTags(unittest.TestCase):
     def test_order_preserved(self):
         tags = [_tag('#Б'), _tag('#А'), _tag('#В')]
         self.assertEqual(filter_tags(tags, '#'), tags)
+
+
+class TestBuildSearchResults(unittest.TestCase):
+    """build_search_results — отмеченные теги всегда в результатах поиска."""
+
+    def test_matched_tag_appears(self):
+        tags = [_tag('#Фэнтези', 1), _tag('#Детектив', 2)]
+        result = build_search_results(tags, set(), 'фэн')
+        self.assertEqual(result, [tags[0]])
+
+    def test_checked_tag_appears_even_if_not_matched(self):
+        tags = [_tag('#Фэнтези', 1), _tag('#Детектив', 2)]
+        result = build_search_results(tags, {1}, 'дет')
+        self.assertIn(tags[0], result)
+        self.assertIn(tags[1], result)
+
+    def test_checked_tag_comes_first(self):
+        tags = [_tag('#Фэнтези', 1), _tag('#Детектив', 2)]
+        result = build_search_results(tags, {1}, 'дет')
+        self.assertEqual(result[0], tags[0])
+
+    def test_checked_and_matched_not_duplicated(self):
+        tags = [_tag('#Фэнтези', 1), _tag('#Детектив', 2)]
+        result = build_search_results(tags, {1}, 'фэн')
+        self.assertEqual(result.count(tags[0]), 1)
+
+    def test_no_selection_returns_only_matched(self):
+        tags = [_tag('#Фэнтези', 1), _tag('#Детектив', 2)]
+        result = build_search_results(tags, set(), 'фэн')
+        self.assertEqual(result, [tags[0]])
+
+    def test_multiple_checked_all_appear(self):
+        tags = [_tag('#Фэнтези', 1), _tag('#Детектив', 2), _tag('#Триллер', 3)]
+        result = build_search_results(tags, {1, 2}, 'триллер')
+        self.assertEqual(len(result), 3)
+
+    def test_no_match_no_selection_empty(self):
+        tags = [_tag('#Фэнтези', 1)]
+        result = build_search_results(tags, set(), 'детектив')
+        self.assertEqual(result, [])
+
+    def test_no_match_but_checked_returns_checked(self):
+        tags = [_tag('#Фэнтези', 1), _tag('#Детектив', 2)]
+        result = build_search_results(tags, {1}, 'xyz')
+        self.assertEqual(result, [tags[0]])
 
 
 class TestTagCacheOperations(unittest.TestCase):

@@ -16,6 +16,17 @@ def filter_tags(tags: list, query: str) -> list:
     return [t for t in tags if q in t.name.lower()]
 
 
+def build_search_results(tags: list, selected_ids: set, query: str) -> list:
+    """Список тегов для отображения при поиске.
+
+    Отмеченные теги показываются первыми, даже если не совпадают с запросом.
+    """
+    matched = filter_tags(tags, query)
+    matched_ids = {t.id for t in matched}
+    checked_extra = [t for t in tags if t.id in selected_ids and t.id not in matched_ids]
+    return checked_extra + matched
+
+
 class TagSearchDialog(QDialog):
     """Диалог выбора тегов с группировкой по алфавиту и поиском."""
 
@@ -135,6 +146,11 @@ class TagSearchDialog(QDialog):
 
     def _on_item_changed(self, item: QTreeWidgetItem, column: int) -> None:
         if column == 0 and item.data(0, Qt.ItemDataRole.UserRole) is not None:
+            tag = item.data(0, Qt.ItemDataRole.UserRole)
+            if item.checkState(0) == Qt.CheckState.Checked:
+                self._preselected_ids.add(tag.id)
+            else:
+                self._preselected_ids.discard(tag.id)
             self._update_delete_btn()
 
     def _update_delete_btn(self) -> None:
@@ -143,7 +159,7 @@ class TagSearchDialog(QDialog):
     def _on_search(self, text: str) -> None:
         text = text.strip()
         if text:
-            self._populate_flat(filter_tags(self._all_tags, text))
+            self._populate_flat(build_search_results(self._all_tags, self._preselected_ids, text))
         else:
             self._populate_grouped(self._all_tags)
 
