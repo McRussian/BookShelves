@@ -55,6 +55,7 @@ class Author(BaseModel):
             qs = qs.where(
                 fn.LOWER(cls.firstname).contains(word) |
                 fn.LOWER(cls.lastname).contains(word) |
+                fn.LOWER(cls.surname).contains(word) |
                 fn.LOWER(AuthorAlias.alias).contains(word)
             )
         return qs.distinct()

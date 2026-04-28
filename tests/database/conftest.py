@@ -10,6 +10,7 @@ class BaseTestCase(unittest.TestCase):
         self.db = SqliteDatabase(':memory:', pragmas={'foreign_keys': 1})
         self.db.bind(ALL_MODELS, bind_refs=False, bind_backrefs=False)
         self.db.connect()
+        self.db.connection().create_function('lower', 1, lambda s: s.lower() if s is not None else None)
         self.db.create_tables(ALL_MODELS)
 
     def tearDown(self):

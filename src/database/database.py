@@ -7,7 +7,7 @@ database_proxy = DatabaseProxy()
 def init_db(db_path: Path) -> SqliteDatabase:
     db = SqliteDatabase(db_path, pragmas={'foreign_keys': 1}, timeout=30)
     db.connect()
-    db.connection().create_function('lower', 1, str.lower)
+    db.connection().create_function('lower', 1, lambda s: s.lower() if s is not None else None)
     database_proxy.initialize(db)
     return db
 

@@ -17,6 +17,7 @@ from src.database.models.user import User
 from src.database.seed import seed_reference_data
 from src.gui.app_signals import app_signals
 from src.gui.authors.author_dialog import AuthorDialog
+from src.gui.authors.author_manage_dialog import AuthorManageDialog
 from src.gui.books.book_dialog import BookDialog
 from src.gui.tags.tag_dialog import TagDialog
 from src.gui.tags.tag_manage_dialog import TagManageDialog
@@ -82,6 +83,8 @@ class MainWindow(QMainWindow):
         authors_menu.addAction(self._action('Добавить автора',      self._on_author_add))
         authors_menu.addAction(self._action('Редактировать автора', self._on_author_edit))
         authors_menu.addAction(self._action('Удалить автора',       self._on_author_delete))
+        authors_menu.addSeparator()
+        authors_menu.addAction(self._action('Поиск авторов',        self._on_author_search))
 
         tags_menu = self._db_menu.addMenu('Теги')
         tags_menu.addAction(self._action('Добавить тег',   self._on_tag_add))
@@ -308,7 +311,14 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def _on_author_edit(self):       pass
-    def _on_author_delete(self):     pass
+
+    def _on_author_delete(self):
+        dlg = AuthorManageDialog(self)
+        dlg.exec()
+
+    def _on_author_search(self):
+        dlg = AuthorManageDialog(self)
+        dlg.exec()
 
     def _on_tag_add(self):
         dlg = TagDialog(self)

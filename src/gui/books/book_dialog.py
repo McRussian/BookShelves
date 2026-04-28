@@ -16,7 +16,7 @@ from src.database.models.edition import Edition
 from src.database.models.publisher import Publisher
 from src.gui.app_signals import app_signals
 from src.utils.normalize import normalize_title
-from src.gui.authors.author_search_dialog import AuthorSearchDialog
+from src.gui.authors.author_select_dialog import AuthorSelectDialog
 from src.gui.genres.genre_search_dialog import GenreSearchDialog
 from src.gui.tags.tag_select_dialog import TagSelectDialog
 from src.gui.widgets.chips_widget import ChipsWidget
@@ -160,7 +160,7 @@ class BookDialog(QDialog):
             self._file_path.setText(path)
 
     def _on_select_authors(self) -> None:
-        dlg = AuthorSearchDialog(self._authors, self)
+        dlg = AuthorSelectDialog(self._authors, self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._authors = dlg.selected_authors
             self._authors_list.clear()
