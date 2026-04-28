@@ -152,6 +152,36 @@ class TestTagCacheOperations(unittest.TestCase):
         cache = [t for t in cache if t.id not in {9999}]
         self.assertEqual(len(cache), 1)
 
+    def test_delete_removes_from_db(self):
+        tag = Tag.create(name='#Фэнтези')
+        tag.delete_instance()
+        self.assertIsNone(Tag.get_or_none(Tag.name == '#Фэнтези'))
+
+    def test_delete_multiple_removes_all_from_db(self):
+        t1 = Tag.create(name='#Фэнтези')
+        t2 = Tag.create(name='#Детектив')
+        t1.delete_instance()
+        t2.delete_instance()
+        self.assertEqual(Tag.select().count(), 0)
+
+    def test_delete_all_tags_cache_and_filter_empty(self):
+        t1 = Tag.create(name='#Фэнтези')
+        t2 = Tag.create(name='#Детектив')
+        cache = [t1, t2]
+        deleted_ids = {t.id for t in cache}
+        for t in cache:
+            t.delete_instance()
+        cache = [t for t in cache if t.id not in deleted_ids]
+        self.assertEqual(cache, [])
+        self.assertEqual(filter_tags(cache, ''), [])
+
+    def test_reload_after_delete_reflects_db(self):
+        t1 = Tag.create(name='#Фэнтези')
+        Tag.create(name='#Детектив')
+        t1.delete_instance()
+        reloaded = self._load_cache()
+        self.assertEqual([t.name for t in reloaded], ['#Детектив'])
+
 
 if __name__ == '__main__':
     unittest.main()

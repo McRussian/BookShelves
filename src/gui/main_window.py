@@ -318,5 +318,7 @@ class MainWindow(QMainWindow):
         dlg = TagSearchDialog(preselected=[], parent=self)
         dlg.exec()
 
-    def _on_tag_delete(self):        pass
+    def _on_tag_delete(self):
+        dlg = TagSearchDialog(preselected=[], parent=self)
+        dlg.exec()
     def _on_about(self):             pass
