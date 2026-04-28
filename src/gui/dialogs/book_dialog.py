@@ -18,7 +18,7 @@ from src.gui.app_signals import app_signals
 from src.utils.normalize import normalize_title
 from src.gui.dialogs.author_search_dialog import AuthorSearchDialog
 from src.gui.dialogs.genre_search_dialog import GenreSearchDialog
-from src.gui.dialogs.tag_search_dialog import TagSearchDialog
+from src.gui.dialogs.tag_select_dialog import TagSelectDialog
 from src.gui.widgets.chips_widget import ChipsWidget
 
 
@@ -169,7 +169,7 @@ class BookDialog(QDialog):
 
     def _on_select_tags(self) -> None:
         current = self._tags_chips.all_data()
-        dlg = TagSearchDialog(current, self)
+        dlg = TagSelectDialog(current, self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             self._tags_chips.set_items([(t.name, t) for t in dlg.selected_tags])
 

@@ -19,7 +19,7 @@ from src.gui.app_signals import app_signals
 from src.gui.dialogs.author_dialog import AuthorDialog
 from src.gui.dialogs.book_dialog import BookDialog
 from src.gui.dialogs.tag_dialog import TagDialog
-from src.gui.dialogs.tag_search_dialog import TagSearchDialog
+from src.gui.dialogs.tag_manage_dialog import TagManageDialog
 from src.gui.dialogs.user_dialog import UserDialog
 from src.gui.dialogs.user_select_dialog import UserSelectDialog
 from src.gui.stats_bar import StatsBar
@@ -315,10 +315,10 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def _on_tag_search(self):
-        dlg = TagSearchDialog(preselected=[], parent=self)
+        dlg = TagManageDialog(self)
         dlg.exec()
 
     def _on_tag_delete(self):
-        dlg = TagSearchDialog(preselected=[], parent=self)
+        dlg = TagManageDialog(self)
         dlg.exec()
     def _on_about(self):             pass
