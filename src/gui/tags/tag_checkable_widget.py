@@ -23,6 +23,7 @@ class TagCheckableWidget(TagListWidget):
         super().__init__(parent)
 
         self._tree.itemChanged.connect(self._on_item_changed)
+        self._expand_checked_groups()
 
         create_btn = QPushButton('+ Создать новый тег')
         create_btn.clicked.connect(self.create_tag)
@@ -57,7 +58,18 @@ class TagCheckableWidget(TagListWidget):
             self._populate_flat(build_search_results(self._all_tags, self._preselected_ids, text))
         else:
             self._populate_grouped(self._all_tags)
+            self._expand_checked_groups()
         self._update_delete_btn()
+
+    def _expand_checked_groups(self) -> None:
+        """Раскрыть группы (буквы), в которых есть отмеченные теги."""
+        root = self._tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            group = root.child(i)
+            for j in range(group.childCount()):
+                if group.child(j).checkState(0) == Qt.CheckState.Checked:
+                    group.setExpanded(True)
+                    break
 
     # ── Выбор ────────────────────────────────────────────────────────────────
 
