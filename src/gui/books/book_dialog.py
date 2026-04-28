@@ -182,21 +182,17 @@ class BookDialog(QDialog):
         self._set_combo_by_id(self._publisher_combo, book.publisher_id)
         self._comment.setPlainText(book.comment or '')
 
-        self._authors = [
-            ba.author
-            for ba in BookAuthor.select(BookAuthor, Author).join(Author)
-                                 .where(BookAuthor.book == book)
-        ]
+        author_ids = [ba.author_id for ba in BookAuthor.select().where(BookAuthor.book == book)]
+        self._authors = list(Author.select().where(Author.id.in_(author_ids))) if author_ids else []
         for author in self._authors:
             self._authors_list.addItem(author.display_name)
 
-        tags = [bt.tag for bt in BookTag.select(BookTag, Tag).join(Tag).where(BookTag.book == book)]
+        tag_ids = [bt.tag_id for bt in BookTag.select().where(BookTag.book == book)]
+        tags = list(Tag.select().where(Tag.id.in_(tag_ids))) if tag_ids else []
         self._tags_chips.set_items([(t.name, t) for t in tags])
 
-        genres = [
-            bg.genre
-            for bg in BookGenre.select(BookGenre, Genre).join(Genre).where(BookGenre.book == book)
-        ]
+        genre_ids = list({bg.genre_id for bg in BookGenre.select().where(BookGenre.book == book)})
+        genres = list(Genre.select().where(Genre.id.in_(genre_ids))) if genre_ids else []
         self._genres_chips.set_items([(g.name, g) for g in genres])
 
     # ── Слоты ────────────────────────────────────────────────────────────────
@@ -309,13 +305,13 @@ class BookDialog(QDialog):
             )
 
         for author in self._authors:
-            BookAuthor.create(book=self._book, author=author)
+            BookAuthor.get_or_create(book=self._book, author=author)
 
         for tag in self._tags_chips.all_data():
-            BookTag.create(book=self._book, tag=tag)
+            BookTag.get_or_create(book=self._book, tag=tag)
 
         for genre in self._genres_chips.all_data():
-            BookGenre.create(book=self._book, genre=genre)
+            BookGenre.get_or_create(book=self._book, genre=genre)
 
         app_signals.db_changed.emit()
         self.accept()

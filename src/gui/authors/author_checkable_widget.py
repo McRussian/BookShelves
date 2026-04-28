@@ -69,7 +69,7 @@ class AuthorCheckableWidget(AuthorListWidget):
 
     @property
     def selected_authors(self) -> list[Author]:
-        return self._checked_authors()
+        return list(self._preselected_cache.values())
 
     def _checked_authors(self) -> list[Author]:
         result = []

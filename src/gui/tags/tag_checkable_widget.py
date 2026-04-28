@@ -75,7 +75,7 @@ class TagCheckableWidget(TagListWidget):
 
     @property
     def selected_tags(self) -> list[Tag]:
-        return self._checked_tags()
+        return [t for t in self._all_tags if t.id in self._preselected_ids]
 
     def _checked_tags(self) -> list[Tag]:
         result = []
