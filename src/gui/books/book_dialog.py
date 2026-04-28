@@ -13,7 +13,9 @@ from src.database.models.book import Book, BookAuthor, BookGenre, BookTag
 from src.database.models.book_format import BookFormat
 from src.database.models.book_type import BookType
 from src.database.models.edition import Edition
+from src.database.models.genre import Genre
 from src.database.models.publisher import Publisher
+from src.database.models.tag import Tag
 from src.gui.app_signals import app_signals
 from src.utils.normalize import normalize_title
 from src.gui.authors.author_select_dialog import AuthorSelectDialog
@@ -25,12 +27,14 @@ from src.gui.widgets.chips_widget import ChipsWidget
 
 class BookDialog(QDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, book: Book | None = None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle('Новая книга')
-        self.setMinimumWidth(600)
-        self._book: Book | None = None
+        self._book = book
+        self._editing = book is not None
         self._authors: list[Author] = []
+
+        self.setWindowTitle('Редактировать книгу' if self._editing else 'Новая книга')
+        self.setMinimumWidth(600)
 
         layout = QVBoxLayout(self)
 
@@ -144,6 +148,9 @@ class BookDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
+        if self._editing:
+            self._prefill(book)
+
     @property
     def book(self) -> Book | None:
         return self._book
@@ -154,6 +161,43 @@ class BookDialog(QDialog):
         combo.addItem('—', None)
         for item in query:
             combo.addItem(getattr(item, field), item)
+
+    def _set_combo_by_id(self, combo: QComboBox, obj_id: int | None) -> None:
+        if obj_id is None:
+            combo.setCurrentIndex(0)
+            return
+        for i in range(combo.count()):
+            data = combo.itemData(i)
+            if data is not None and data.id == obj_id:
+                combo.setCurrentIndex(i)
+                return
+
+    def _prefill(self, book: Book) -> None:
+        self._title.setText(book.title)
+        self._file_path.setText(book.file_path)
+        self._pages.setValue(book.pages or 0)
+        self._year.setValue(book.year or 0)
+        self._set_combo_by_id(self._book_type_combo, book.book_type_id)
+        self._set_combo_by_id(self._edition_combo, book.edition_id)
+        self._set_combo_by_id(self._publisher_combo, book.publisher_id)
+        self._comment.setPlainText(book.comment or '')
+
+        self._authors = [
+            ba.author
+            for ba in BookAuthor.select(BookAuthor, Author).join(Author)
+                                 .where(BookAuthor.book == book)
+        ]
+        for author in self._authors:
+            self._authors_list.addItem(author.display_name)
+
+        tags = [bt.tag for bt in BookTag.select(BookTag, Tag).join(Tag).where(BookTag.book == book)]
+        self._tags_chips.set_items([(t.name, t) for t in tags])
+
+        genres = [
+            bg.genre
+            for bg in BookGenre.select(BookGenre, Genre).join(Genre).where(BookGenre.book == book)
+        ]
+        self._genres_chips.set_items([(g.name, g) for g in genres])
 
     # ── Слоты ────────────────────────────────────────────────────────────────
 
@@ -209,42 +253,60 @@ class BookDialog(QDialog):
             QMessageBox.warning(self, 'Ошибка', 'Выберите файл книги.')
             return
 
-        if Book.get_or_none(Book.file_path == file_path):
+        existing = Book.get_or_none(Book.file_path == file_path)
+        if existing and (not self._editing or existing.id != self._book.id):
             QMessageBox.warning(
                 self, 'Дубликат',
                 f'Книга с таким файлом уже есть в библиотеке:\n{file_path}',
             )
             return
 
-        duplicates = self._find_similar_books(title)
-        if duplicates:
-            names = '\n'.join(self._book_description(b) for b in duplicates)
-            reply = QMessageBox.question(
-                self, 'Возможный дубликат',
-                f'В библиотеке уже есть похожая книга:\n\n{names}\n\nДобавить ещё одну?',
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if reply != QMessageBox.StandardButton.Yes:
-                return
+        if not self._editing:
+            duplicates = self._find_similar_books(title)
+            if duplicates:
+                names = '\n'.join(self._book_description(b) for b in duplicates)
+                reply = QMessageBox.question(
+                    self, 'Возможный дубликат',
+                    f'В библиотеке уже есть похожая книга:\n\n{names}\n\nДобавить ещё одну?',
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
 
         p = Path(file_path)
         file_size = p.stat().st_size if p.exists() else None
-
         ext = p.suffix.lower().lstrip('.')
         fmt, _ = BookFormat.get_or_create(name=ext) if ext else (None, None)
 
-        self._book = Book.create(
-            title=title,
-            file_path=file_path,
-            file_size=file_size,
-            pages=self._pages.value() or None,
-            year=self._year.value() or None,
-            book_type=self._book_type_combo.currentData(),
-            format=fmt,
-            edition=self._edition_combo.currentData(),
-            publisher=self._publisher_combo.currentData(),
-            comment=self._comment.toPlainText().strip() or None,
-        )
+        if self._editing:
+            self._book.title = title
+            self._book.file_path = file_path
+            self._book.file_size = file_size
+            self._book.pages = self._pages.value() or None
+            self._book.year = self._year.value() or None
+            self._book.book_type = self._book_type_combo.currentData()
+            self._book.format = fmt
+            self._book.edition = self._edition_combo.currentData()
+            self._book.publisher = self._publisher_combo.currentData()
+            self._book.comment = self._comment.toPlainText().strip() or None
+            self._book.save()
+
+            BookAuthor.delete().where(BookAuthor.book == self._book).execute()
+            BookTag.delete().where(BookTag.book == self._book).execute()
+            BookGenre.delete().where(BookGenre.book == self._book).execute()
+        else:
+            self._book = Book.create(
+                title=title,
+                file_path=file_path,
+                file_size=file_size,
+                pages=self._pages.value() or None,
+                year=self._year.value() or None,
+                book_type=self._book_type_combo.currentData(),
+                format=fmt,
+                edition=self._edition_combo.currentData(),
+                publisher=self._publisher_combo.currentData(),
+                comment=self._comment.toPlainText().strip() or None,
+            )
 
         for author in self._authors:
             BookAuthor.create(book=self._book, author=author)

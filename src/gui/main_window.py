@@ -19,6 +19,7 @@ from src.gui.app_signals import app_signals
 from src.gui.authors.author_dialog import AuthorDialog
 from src.gui.authors.author_manage_dialog import AuthorManageDialog
 from src.gui.books.book_dialog import BookDialog
+from src.gui.books.book_manage_dialog import BookManageDialog
 from src.gui.publishers.publisher_dialog import PublisherDialog
 from src.gui.publishers.publisher_manage_dialog import PublisherManageDialog
 from src.gui.tags.tag_dialog import TagDialog
@@ -75,11 +76,8 @@ class MainWindow(QMainWindow):
         shelves_menu.addAction(self._action('Удалить полку',       self._on_shelf_delete))
 
         books_menu = self._db_menu.addMenu('Книги')
-        books_menu.addAction(self._action('Добавить книгу',      self._on_book_add))
-        books_menu.addAction(self._action('Редактировать книгу', self._on_book_edit))
-        books_menu.addAction(self._action('Удалить книгу',       self._on_book_delete))
-        books_menu.addSeparator()
-        books_menu.addAction(self._action('Поиск книги', self._on_book_search))
+        books_menu.addAction(self._action('Добавить книгу', self._on_book_add))
+        books_menu.addAction(self._action('Поиск книги',   self._on_book_search))
 
         authors_menu = self._db_menu.addMenu('Авторы')
         authors_menu.addAction(self._action('Добавить автора', self._on_author_add))
@@ -300,12 +298,12 @@ class MainWindow(QMainWindow):
     def _on_tab_close_requested(self, index: int): pass
 
     def _on_book_add(self):
-        dlg = BookDialog(self)
+        dlg = BookDialog(parent=self)
         dlg.exec()
 
-    def _on_book_edit(self):         pass
-    def _on_book_delete(self):       pass
-    def _on_book_search(self):       pass
+    def _on_book_search(self):
+        dlg = BookManageDialog(self)
+        dlg.exec()
 
     def _on_author_add(self):
         dlg = AuthorDialog(self)
