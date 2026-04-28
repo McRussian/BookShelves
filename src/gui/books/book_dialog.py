@@ -18,6 +18,7 @@ from src.gui.app_signals import app_signals
 from src.utils.normalize import normalize_title
 from src.gui.authors.author_select_dialog import AuthorSelectDialog
 from src.gui.genres.genre_search_dialog import GenreSearchDialog
+from src.gui.publishers.publisher_dialog import PublisherDialog
 from src.gui.tags.tag_select_dialog import TagSelectDialog
 from src.gui.widgets.chips_widget import ChipsWidget
 
@@ -77,12 +78,17 @@ class BookDialog(QDialog):
         self._edition_combo = QComboBox()
         self._fill_combo(self._edition_combo, Edition.select(), 'name')
         self._publisher_combo = QComboBox()
-        self._fill_combo(self._publisher_combo, Publisher.select(), 'name')
+        self._fill_combo(self._publisher_combo, Publisher.select().order_by(Publisher.name), 'name')
+        add_pub_btn = QPushButton('+')
+        add_pub_btn.setFixedWidth(28)
+        add_pub_btn.setToolTip('Создать новое издательство')
+        add_pub_btn.clicked.connect(self._on_add_publisher)
         ed_pub_row.addWidget(QLabel('Издание:'))
         ed_pub_row.addWidget(self._edition_combo, stretch=1)
         ed_pub_row.addSpacing(16)
         ed_pub_row.addWidget(QLabel('Издательство:'))
         ed_pub_row.addWidget(self._publisher_combo, stretch=2)
+        ed_pub_row.addWidget(add_pub_btn)
         form.addRow('', ed_pub_row)
 
         self._comment = QTextEdit()
@@ -150,6 +156,18 @@ class BookDialog(QDialog):
             combo.addItem(getattr(item, field), item)
 
     # ── Слоты ────────────────────────────────────────────────────────────────
+
+    def _on_add_publisher(self) -> None:
+        dlg = PublisherDialog(parent=self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        new_pub = dlg.publisher
+        self._publisher_combo.clear()
+        self._fill_combo(self._publisher_combo, Publisher.select().order_by(Publisher.name), 'name')
+        for i in range(self._publisher_combo.count()):
+            if (pub := self._publisher_combo.itemData(i)) and pub.id == new_pub.id:
+                self._publisher_combo.setCurrentIndex(i)
+                break
 
     def _on_browse(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
