@@ -329,7 +329,7 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def _on_publisher_add(self):
-        dlg = PublisherDialog(self)
+        dlg = PublisherDialog(parent=self)
         dlg.exec()
 
     def _on_publisher_delete(self):
