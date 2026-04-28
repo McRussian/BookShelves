@@ -10,6 +10,12 @@ from src.gui.app_signals import app_signals
 from src.gui.dialogs.tag_dialog import TagDialog
 
 
+def filter_tags(tags: list, query: str) -> list:
+    """Фильтр по подстроке без учёта регистра; работает с кириллицей через str.lower()."""
+    q = query.lower()
+    return [t for t in tags if q in t.name.lower()]
+
+
 class TagSearchDialog(QDialog):
     """Диалог выбора тегов с группировкой по алфавиту и поиском."""
 
@@ -20,6 +26,7 @@ class TagSearchDialog(QDialog):
 
         self._preselected_ids = {t.id for t in preselected}
         self._selected: list[Tag] = []
+        self._all_tags: list[Tag] = list(Tag.select().order_by(Tag.name))
 
         layout = QVBoxLayout(self)
 
@@ -55,7 +62,7 @@ class TagSearchDialog(QDialog):
         bottom.addWidget(buttons)
         layout.addLayout(bottom)
 
-        self._populate_grouped(Tag.select().order_by(Tag.name))
+        self._populate_grouped(self._all_tags)
 
     @property
     def selected_tags(self) -> list[Tag]:
@@ -136,15 +143,17 @@ class TagSearchDialog(QDialog):
     def _on_search(self, text: str) -> None:
         text = text.strip()
         if text:
-            self._populate_flat(Tag.search(text))
+            self._populate_flat(filter_tags(self._all_tags, text))
         else:
-            self._populate_grouped(Tag.select().order_by(Tag.name))
+            self._populate_grouped(self._all_tags)
 
     def _on_create_tag(self) -> None:
         dlg = TagDialog(self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             new_tag = dlg.tag
             self._preselected_ids.add(new_tag.id)
+            self._all_tags.append(new_tag)
+            self._all_tags.sort(key=lambda t: t.name)
             self._on_search(self._search.text())
 
     def _on_delete(self) -> None:
@@ -159,9 +168,11 @@ class TagSearchDialog(QDialog):
         )
         if reply != QMessageBox.StandardButton.Yes:
             return
+        deleted_ids = {t.id for t in tags}
         for tag in tags:
             self._preselected_ids.discard(tag.id)
             tag.delete_instance()
+        self._all_tags = [t for t in self._all_tags if t.id not in deleted_ids]
         app_signals.db_changed.emit()
         self._on_search(self._search.text())
 
