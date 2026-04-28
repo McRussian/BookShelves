@@ -19,6 +19,7 @@ from src.gui.app_signals import app_signals
 from src.gui.authors.author_dialog import AuthorDialog
 from src.gui.authors.author_manage_dialog import AuthorManageDialog
 from src.gui.books.book_dialog import BookDialog
+from src.gui.publishers.publisher_manage_dialog import PublisherManageDialog
 from src.gui.tags.tag_dialog import TagDialog
 from src.gui.tags.tag_manage_dialog import TagManageDialog
 from src.gui.users.user_dialog import UserDialog
@@ -85,6 +86,9 @@ class MainWindow(QMainWindow):
         authors_menu.addAction(self._action('Удалить автора',       self._on_author_delete))
         authors_menu.addSeparator()
         authors_menu.addAction(self._action('Поиск авторов',        self._on_author_search))
+
+        publishers_menu = self._db_menu.addMenu('Издательства')
+        publishers_menu.addAction(self._action('Управление издательствами', self._on_publisher_manage))
 
         tags_menu = self._db_menu.addMenu('Теги')
         tags_menu.addAction(self._action('Добавить тег',   self._on_tag_add))
@@ -318,6 +322,10 @@ class MainWindow(QMainWindow):
 
     def _on_author_search(self):
         dlg = AuthorManageDialog(self)
+        dlg.exec()
+
+    def _on_publisher_manage(self):
+        dlg = PublisherManageDialog(self)
         dlg.exec()
 
     def _on_tag_add(self):
