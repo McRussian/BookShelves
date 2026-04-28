@@ -82,23 +82,16 @@ class MainWindow(QMainWindow):
         books_menu.addAction(self._action('Поиск книги', self._on_book_search))
 
         authors_menu = self._db_menu.addMenu('Авторы')
-        authors_menu.addAction(self._action('Добавить автора',      self._on_author_add))
-        authors_menu.addAction(self._action('Редактировать автора', self._on_author_edit))
-        authors_menu.addAction(self._action('Удалить автора',       self._on_author_delete))
-        authors_menu.addSeparator()
-        authors_menu.addAction(self._action('Поиск авторов',        self._on_author_search))
+        authors_menu.addAction(self._action('Добавить автора', self._on_author_add))
+        authors_menu.addAction(self._action('Поиск авторов',  self._on_author_search))
 
         publishers_menu = self._db_menu.addMenu('Издательства')
         publishers_menu.addAction(self._action('Добавить издательство', self._on_publisher_add))
-        publishers_menu.addAction(self._action('Удалить издательство',  self._on_publisher_delete))
-        publishers_menu.addSeparator()
         publishers_menu.addAction(self._action('Поиск издательств',     self._on_publisher_search))
 
         tags_menu = self._db_menu.addMenu('Теги')
-        tags_menu.addAction(self._action('Добавить тег',   self._on_tag_add))
-        tags_menu.addAction(self._action('Удалить тег',    self._on_tag_delete))
-        tags_menu.addSeparator()
-        tags_menu.addAction(self._action('Поиск тегов',   self._on_tag_search))
+        tags_menu.addAction(self._action('Добавить тег',  self._on_tag_add))
+        tags_menu.addAction(self._action('Поиск тегов',  self._on_tag_search))
 
         # Пользователи
         self._users_menu = menubar.addMenu('Пользователи')
@@ -320,20 +313,12 @@ class MainWindow(QMainWindow):
 
     def _on_author_edit(self):       pass
 
-    def _on_author_delete(self):
-        dlg = AuthorManageDialog(self)
-        dlg.exec()
-
     def _on_author_search(self):
         dlg = AuthorManageDialog(self)
         dlg.exec()
 
     def _on_publisher_add(self):
         dlg = PublisherDialog(parent=self)
-        dlg.exec()
-
-    def _on_publisher_delete(self):
-        dlg = PublisherManageDialog(self)
         dlg.exec()
 
     def _on_publisher_search(self):
@@ -345,10 +330,6 @@ class MainWindow(QMainWindow):
         dlg.exec()
 
     def _on_tag_search(self):
-        dlg = TagManageDialog(self)
-        dlg.exec()
-
-    def _on_tag_delete(self):
         dlg = TagManageDialog(self)
         dlg.exec()
     def _on_about(self):             pass
