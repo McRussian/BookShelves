@@ -76,7 +76,7 @@ class AuthorSearchDialog(QDialog):
                 group_item = QTreeWidgetItem(self._tree, [letter])
                 group_item.setFont(0, bold)
                 group_item.setFlags(group_item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
-                group_item.setExpanded(True)
+                group_item.setExpanded(False)
                 groups[letter] = group_item
             self._add_author_item(groups[letter], author)
 
