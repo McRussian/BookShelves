@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QEvent, Qt
 from PyQt6.QtGui import QAction, QCloseEvent, QIcon
 from PyQt6.QtWidgets import (
-    QFileDialog, QMainWindow, QMenuBar, QMessageBox,
+    QFileDialog, QInputDialog, QLineEdit, QMainWindow, QMenuBar, QMessageBox,
     QSizePolicy, QTabWidget, QToolBar, QToolButton, QVBoxLayout, QWidget,
 )
 from peewee import fn
@@ -13,11 +13,14 @@ from src.database.migrations import run_migrations
 from src.database.models import ALL_MODELS
 from src.database.models.author import Author
 from src.database.models.book import Book
+from src.database.models.shelf import Shelf
 from src.database.models.user import User
 from src.database.seed import seed_reference_data
 from src.gui.app_signals import app_signals
 from src.gui.authors.author_dialog import AuthorDialog
 from src.gui.authors.author_manage_dialog import AuthorManageDialog
+from src.gui.shelves.shelf_manage_dialog import ShelfManageDialog
+from src.gui.shelves.shelf_widget import ShelfWidget
 from src.gui.books.book_dialog import BookDialog
 from src.gui.books.book_manage_dialog import BookManageDialog
 from src.gui.publishers.publisher_dialog import PublisherDialog
@@ -71,9 +74,8 @@ class MainWindow(QMainWindow):
         self._db_menu = menubar.addMenu('База данных')
 
         shelves_menu = self._db_menu.addMenu('Полки')
-        shelves_menu.addAction(self._action('Добавить полку',      self._on_shelf_add))
-        shelves_menu.addAction(self._action('Переименовать полку', self._on_shelf_rename))
-        shelves_menu.addAction(self._action('Удалить полку',       self._on_shelf_delete))
+        shelves_menu.addAction(self._action('Добавить полку',    self._on_shelf_add))
+        shelves_menu.addAction(self._action('Управление полками', self._on_shelf_manage))
 
         books_menu = self._db_menu.addMenu('Книги')
         books_menu.addAction(self._action('Добавить книгу', self._on_book_add))
@@ -147,6 +149,7 @@ class MainWindow(QMainWindow):
         self.shelf_tabs = QTabWidget()
         self.shelf_tabs.setTabsClosable(True)
         self.shelf_tabs.tabCloseRequested.connect(self._on_tab_close_requested)
+        self.shelf_tabs.tabBar().installEventFilter(self)
         layout.addWidget(self.shelf_tabs, stretch=1)
 
         self.stats_bar = StatsBar()
@@ -166,6 +169,50 @@ class MainWindow(QMainWindow):
         self._toolbar.setVisible(active)
         self.stats_bar.setVisible(active)
 
+    def eventFilter(self, obj, event) -> bool:
+        if obj is self.shelf_tabs.tabBar() and event.type() == QEvent.Type.MouseButtonDblClick:
+            index = self.shelf_tabs.tabBar().tabAt(event.pos())
+            if index >= 0 and isinstance(self.shelf_tabs.widget(index), ShelfWidget):
+                self._start_tab_rename(index)
+                return True
+        return super().eventFilter(obj, event)
+
+    def _start_tab_rename(self, index: int) -> None:
+        tab_bar = self.shelf_tabs.tabBar()
+        rect = tab_bar.tabRect(index)
+        editor = QLineEdit(tab_bar)
+        editor.setText(self.shelf_tabs.tabText(index))
+        editor.setGeometry(rect)
+        editor.selectAll()
+        editor.show()
+        editor.setFocus()
+        self._tab_editor = editor
+
+        committed = [False]
+
+        def commit():
+            if committed[0]:
+                return
+            committed[0] = True
+            name = editor.text().strip()
+            editor.deleteLater()
+            self._tab_editor = None
+            if not name:
+                return
+            w = self.shelf_tabs.widget(index)
+            if not isinstance(w, ShelfWidget) or name == w.shelf.name:
+                return
+            try:
+                w.shelf.name = name
+                w.shelf.save()
+                self.shelf_tabs.setTabText(index, name)
+            except Exception:
+                w.shelf = Shelf.get_by_id(w.shelf.id)
+                QMessageBox.warning(self, 'Ошибка', f'Полка «{name}» уже существует.')
+
+        editor.returnPressed.connect(commit)
+        editor.editingFinished.connect(commit)
+
     def _logout(self) -> None:
         """Очистить UI текущего пользователя."""
         self._current_user = None
@@ -178,6 +225,28 @@ class MainWindow(QMainWindow):
         self._settings.last_user_id = user.id
         self._user_btn.setText(f'  {user.login}')
         app_signals.user_changed.emit(user)
+        for shelf in Shelf.for_user(user):
+            if shelf.is_active:
+                self._open_shelf_tab(shelf)
+
+    def _open_shelf_tab(self, shelf: Shelf) -> None:
+        shelf.is_active = True
+        shelf.save()
+        widget = ShelfWidget(shelf)
+        self.shelf_tabs.addTab(widget, shelf.name)
+        self.shelf_tabs.setCurrentWidget(widget)
+
+    def _open_ids(self) -> set[int]:
+        ids = set()
+        for i in range(self.shelf_tabs.count()):
+            w = self.shelf_tabs.widget(i)
+            if isinstance(w, ShelfWidget):
+                ids.add(w.shelf.id)
+        return ids
+
+    def _current_shelf_widget(self) -> ShelfWidget | None:
+        w = self.shelf_tabs.currentWidget()
+        return w if isinstance(w, ShelfWidget) else None
 
     def _apply_menubar_style(self, *menubars: QMenuBar, titles: tuple[str, ...]) -> None:
         fm = self.menuBar().fontMetrics()
@@ -292,10 +361,46 @@ class MainWindow(QMainWindow):
     # ── Слоты (заглушки) ──────────────────────────────────────────────────────
 
     def _on_app_settings(self):      pass
-    def _on_shelf_add(self):         pass
-    def _on_shelf_rename(self):      pass
-    def _on_shelf_delete(self):      pass
-    def _on_tab_close_requested(self, index: int): pass
+    def _on_shelf_add(self):
+        if not self._current_user:
+            return
+        name, ok = QInputDialog.getText(self, 'Новая полка', 'Название полки:')
+        name = name.strip()
+        if not ok or not name:
+            return
+        try:
+            shelf = Shelf.create(name=name, user=self._current_user)
+        except Exception:
+            QMessageBox.warning(self, 'Ошибка', f'Полка «{name}» уже существует.')
+            return
+        self._open_shelf_tab(shelf)
+
+    def _on_shelf_manage(self):
+        if not self._current_user:
+            return
+        shelves = Shelf.for_user(self._current_user)
+        if not shelves:
+            QMessageBox.information(self, 'Полки', 'У вас пока нет полок.')
+            return
+        dlg = ShelfManageDialog(shelves, self._open_ids(), self)
+        if dlg.exec() == ShelfManageDialog.DialogCode.Accepted and dlg.opened_shelf:
+            self._open_shelf_tab(dlg.opened_shelf)
+        else:
+            self._sync_tabs_after_manage()
+
+    def _sync_tabs_after_manage(self) -> None:
+        """Закрыть табы удалённых в диалоге полок."""
+        for i in range(self.shelf_tabs.count() - 1, -1, -1):
+            w = self.shelf_tabs.widget(i)
+            if isinstance(w, ShelfWidget) and not Shelf.get_or_none(Shelf.id == w.shelf.id):
+                self.shelf_tabs.removeTab(i)
+
+    def _on_tab_close_requested(self, index: int):
+        w = self.shelf_tabs.widget(index)
+        if isinstance(w, ShelfWidget):
+            w.shelf.is_active = False
+            w.shelf.save()
+        self.shelf_tabs.removeTab(index)
 
     def _on_book_add(self):
         dlg = BookDialog(parent=self)
