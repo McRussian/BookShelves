@@ -140,5 +140,40 @@ class TestShelfIsActive(BaseTestCase):
         self.assertEqual(len(Shelf.for_user(self.user)), 2)
 
 
+class TestShelfDescription(BaseTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.user = User.create(login='alice', firstname='Alice')
+
+    def test_default_description_is_none(self):
+        shelf = Shelf.create(name='Sci-Fi', user=self.user)
+        self.assertIsNone(shelf.description)
+
+    def test_create_with_description(self):
+        shelf = Shelf.create(name='Sci-Fi', user=self.user, description='Твёрдая НФ')
+        self.assertEqual(shelf.description, 'Твёрдая НФ')
+
+    def test_set_description(self):
+        shelf = Shelf.create(name='Sci-Fi', user=self.user)
+        shelf.description = 'Подборка для поездок'
+        shelf.save()
+        reloaded = Shelf.get_by_id(shelf.id)
+        self.assertEqual(reloaded.description, 'Подборка для поездок')
+
+    def test_clear_description(self):
+        shelf = Shelf.create(name='Sci-Fi', user=self.user, description='Что-то')
+        shelf.description = None
+        shelf.save()
+        reloaded = Shelf.get_by_id(shelf.id)
+        self.assertIsNone(reloaded.description)
+
+    def test_description_multiline(self):
+        text = 'Строка 1\nСтрока 2\nСтрока 3'
+        shelf = Shelf.create(name='Sci-Fi', user=self.user, description=text)
+        reloaded = Shelf.get_by_id(shelf.id)
+        self.assertEqual(reloaded.description, text)
+
+
 if __name__ == '__main__':
     unittest.main()

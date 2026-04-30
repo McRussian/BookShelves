@@ -1,4 +1,4 @@
-from peewee import AutoField, BooleanField, CharField, ForeignKeyField, fn
+from peewee import AutoField, BooleanField, CharField, ForeignKeyField, fn, TextField
 
 from src.database.database import BaseModel
 from src.database.models.user import User
@@ -7,6 +7,7 @@ from src.database.models.user import User
 class Shelf(BaseModel):
     id = AutoField()
     name = CharField(max_length=100)
+    description = TextField(null=True)
     user = ForeignKeyField(User, backref='shelves', on_delete='CASCADE')
     is_active = BooleanField(default=True)
 
