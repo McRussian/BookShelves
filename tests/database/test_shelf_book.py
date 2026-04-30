@@ -70,6 +70,32 @@ class TestShelfBook(BaseTestCase):
         self.assertEqual([b.id for b in self.shelf.get_books()], [self.b1.id])
         self.assertEqual([b.id for b in shelf2.get_books()], [self.b2.id])
 
+    # ── remove_book ───────────────────────────────────────────────────────────
+
+    def test_remove_book(self):
+        self.shelf.add_book(self.b1)
+        self.shelf.remove_book(self.b1)
+        self.assertEqual(self.shelf.get_books(), [])
+
+    def test_remove_book_leaves_others(self):
+        self.shelf.add_book(self.b1)
+        self.shelf.add_book(self.b2)
+        self.shelf.remove_book(self.b1)
+        self.assertEqual([b.id for b in self.shelf.get_books()], [self.b2.id])
+
+    def test_remove_book_from_one_shelf_leaves_other_shelf(self):
+        shelf2 = Shelf.create(name='Фэнтези', user=self.user)
+        self.shelf.add_book(self.b1)
+        shelf2.add_book(self.b1)
+        self.shelf.remove_book(self.b1)
+        self.assertEqual(self.shelf.get_books(), [])
+        self.assertEqual([b.id for b in shelf2.get_books()], [self.b1.id])
+
+    def test_remove_book_not_on_shelf_is_safe(self):
+        self.shelf.add_book(self.b1)
+        self.shelf.remove_book(self.b2)
+        self.assertEqual(len(self.shelf.get_books()), 1)
+
     # ── каскадное удаление ────────────────────────────────────────────────────
 
     def test_delete_shelf_cascades_shelf_books(self):
@@ -81,6 +107,15 @@ class TestShelfBook(BaseTestCase):
         self.shelf.add_book(self.b1)
         self.b1.delete_instance()
         self.assertEqual(ShelfBook.select().count(), 0)
+
+    def test_delete_book_cascades_only_its_own_shelf_books(self):
+        shelf2 = Shelf.create(name='Фэнтези', user=self.user)
+        self.shelf.add_book(self.b1)
+        self.shelf.add_book(self.b2)
+        shelf2.add_book(self.b1)
+        self.b1.delete_instance()
+        self.assertEqual(ShelfBook.select().count(), 1)
+        self.assertEqual(self.shelf.get_books()[0].id, self.b2.id)
 
 
 if __name__ == '__main__':

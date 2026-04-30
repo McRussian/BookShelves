@@ -40,6 +40,12 @@ class Shelf(BaseModel):
             .order_by(ShelfBook.position)
         )
 
+    def remove_book(self, book: Book) -> None:
+        ShelfBook.delete().where(
+            ShelfBook.shelf == self,
+            ShelfBook.book == book,
+        ).execute()
+
 
 class ShelfBook(BaseModel):
     shelf = ForeignKeyField(Shelf, backref='shelf_books', on_delete='CASCADE')
