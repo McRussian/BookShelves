@@ -1,10 +1,12 @@
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
-    QFrame, QHBoxLayout, QLabel, QListWidget,
+    QDialog, QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
     QPushButton, QTextEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
+from src.database.models.book import Book
 from src.database.models.shelf import Shelf
+from src.gui.books.book_select_dialog import BookSelectDialog
 
 
 class ShelfWidget(QWidget):
@@ -26,6 +28,7 @@ class ShelfWidget(QWidget):
         layout.addWidget(self._build_description())
         layout.addWidget(self._build_book_list(), stretch=1)
 
+        self._load_books()
         self._refresh_stats()
 
     # ── Построение UI ─────────────────────────────────────────────────────────
@@ -48,7 +51,8 @@ class ShelfWidget(QWidget):
 
         self._add_btn = QPushButton('+')
         self._add_btn.setFixedWidth(28)
-        self._add_btn.setToolTip('Добавить книгу на полку')
+        self._add_btn.setToolTip('Добавить книги на полку')
+        self._add_btn.clicked.connect(self._on_add_books)
         row.addWidget(self._add_btn)
 
         return header
@@ -76,12 +80,44 @@ class ShelfWidget(QWidget):
             self._save_timer.stop()
             self._save_description()
 
+    # ── Книги ─────────────────────────────────────────────────────────────────
+
+    def _load_books(self) -> None:
+        self._book_list.clear()
+        for book in self.shelf.get_books():
+            self._add_book_item(book)
+
+    def _add_book_item(self, book: Book) -> None:
+        item = QListWidgetItem(book.title)
+        item.setData(Qt.ItemDataRole.UserRole, book)
+        self._book_list.addItem(item)
+
+    def _on_add_books(self) -> None:
+        already_on_shelf = self.shelf.get_books()
+        dlg = BookSelectDialog(preselected=already_on_shelf, parent=self)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        already_ids = {b.id for b in already_on_shelf}
+        added = False
+        for book in dlg.selected_books:
+            if book.id not in already_ids:
+                self.shelf.add_book(book)
+                self._add_book_item(book)
+                added = True
+        if added:
+            self._refresh_stats()
+
     # ── Статистика ────────────────────────────────────────────────────────────
 
     def _refresh_stats(self) -> None:
         book_count = self._book_list.count()
         parts = [f'{book_count} {self._books_word(book_count)}']
-        # страницы добавим когда появится ShelfBook
+        total_pages = sum(
+            self._book_list.item(i).data(Qt.ItemDataRole.UserRole).pages or 0
+            for i in range(book_count)
+        )
+        if total_pages:
+            parts.append(f'{total_pages:,} стр.'.replace(',', ' '))
         self._stats_label.setText(' · '.join(parts))
 
     @staticmethod

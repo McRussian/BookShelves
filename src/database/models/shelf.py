@@ -1,6 +1,7 @@
-from peewee import AutoField, BooleanField, CharField, ForeignKeyField, fn, TextField
+from peewee import AutoField, BooleanField, CharField, ForeignKeyField, fn, IntegerField, TextField
 
 from src.database.database import BaseModel
+from src.database.models.book import Book
 from src.database.models.user import User
 
 
@@ -18,3 +19,33 @@ class Shelf(BaseModel):
     @classmethod
     def for_user(cls, user) -> list['Shelf']:
         return list(cls.select().where(cls.user == user).order_by(fn.LOWER(cls.name)))
+
+    def add_book(self, book: Book) -> 'ShelfBook':
+        max_pos = (
+            ShelfBook.select(fn.MAX(ShelfBook.position))
+            .where(ShelfBook.shelf == self)
+            .scalar()
+        ) or 0
+        obj, _ = ShelfBook.get_or_create(
+            shelf=self, book=book,
+            defaults={'position': max_pos + 1},
+        )
+        return obj
+
+    def get_books(self) -> list[Book]:
+        return list(
+            Book.select()
+            .join(ShelfBook)
+            .where(ShelfBook.shelf == self)
+            .order_by(ShelfBook.position)
+        )
+
+
+class ShelfBook(BaseModel):
+    shelf = ForeignKeyField(Shelf, backref='shelf_books', on_delete='CASCADE')
+    book = ForeignKeyField(Book, backref='shelf_books', on_delete='CASCADE')
+    position = IntegerField(default=0)
+
+    class Meta:
+        table_name = 'shelf_books'
+        indexes = ((('shelf_id', 'book_id'), True),)
