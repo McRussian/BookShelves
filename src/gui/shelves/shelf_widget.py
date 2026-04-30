@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (
 
 from src.database.models.book import Book
 from src.database.models.shelf import Shelf
+from src.gui.app_signals import app_signals
 from src.gui.books.book_select_dialog import BookSelectDialog
 
 
@@ -30,6 +31,8 @@ class ShelfWidget(QWidget):
 
         self._load_books()
         self._refresh_stats()
+
+        app_signals.db_changed.connect(self._on_db_changed)
 
     # ── Построение UI ─────────────────────────────────────────────────────────
 
@@ -81,6 +84,10 @@ class ShelfWidget(QWidget):
             self._save_description()
 
     # ── Книги ─────────────────────────────────────────────────────────────────
+
+    def _on_db_changed(self) -> None:
+        self._load_books()
+        self._refresh_stats()
 
     def _load_books(self) -> None:
         self._book_list.clear()
