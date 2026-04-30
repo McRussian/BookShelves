@@ -1,7 +1,8 @@
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QDialog, QFrame, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QPushButton, QTextEdit, QToolButton, QVBoxLayout, QWidget,
+    QMenu, QMessageBox, QPushButton, QTextEdit, QToolButton, QVBoxLayout, QWidget,
 )
 
 from src.database.models.book import Book
@@ -73,6 +74,9 @@ class ShelfWidget(QWidget):
         self._book_list = QListWidget()
         self._book_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._book_list.customContextMenuRequested.connect(self._show_context_menu)
+        self._book_list.itemDoubleClicked.connect(
+            lambda item: self._open_book(item.data(Qt.ItemDataRole.UserRole))
+        )
         return self._book_list
 
     # ── Шапка ─────────────────────────────────────────────────────────────────
@@ -94,8 +98,16 @@ class ShelfWidget(QWidget):
         for book in self.shelf.get_books():
             self._add_book_item(book)
 
+    @staticmethod
+    def _book_label(book: Book) -> str:
+        authors = [ba.author for ba in book.book_authors]
+        if not authors:
+            return book.title
+        names = ', '.join(a.full_name for a in authors)
+        return f'{book.title} · {names}'
+
     def _add_book_item(self, book: Book) -> None:
-        item = QListWidgetItem(book.title)
+        item = QListWidgetItem(self._book_label(book))
         item.setData(Qt.ItemDataRole.UserRole, book)
         self._book_list.addItem(item)
 
@@ -152,16 +164,34 @@ class ShelfWidget(QWidget):
     # ── Контекстное меню ─────────────────────────────────────────────────────
 
     def _show_context_menu(self, pos) -> None:
-        from PyQt6.QtWidgets import QMenu
-        if self._book_list.itemAt(pos) is None:
+        item = self._book_list.itemAt(pos)
+        if item is None:
             return
+        book: Book = item.data(Qt.ItemDataRole.UserRole)
         menu = QMenu(self)
-        menu.addAction('Редактировать', self._on_book_edit)
-        menu.addAction('Открыть',       self._on_book_open)
+        menu.addAction('Редактировать', lambda: self._edit_book(book, item))
+        menu.addAction('Открыть',       lambda: self._open_book(book))
         menu.addSeparator()
-        menu.addAction('Убрать с полки', self._on_book_remove)
+        menu.addAction('Убрать с полки', lambda: self._remove_book(book, item))
         menu.exec(self._book_list.mapToGlobal(pos))
 
-    def _on_book_edit(self):   pass
-    def _on_book_open(self):   pass
-    def _on_book_remove(self): pass
+    def _edit_book(self, book: Book, item: QListWidgetItem) -> None:
+        from src.gui.books.book_dialog import BookDialog
+        dlg = BookDialog(book=book, parent=self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            updated = Book.get_by_id(book.id)
+            item.setText(self._book_label(updated))
+            item.setData(Qt.ItemDataRole.UserRole, updated)
+
+    def _open_book(self, book: Book) -> None:
+        path = book.file_path
+        if not path:
+            return
+        url = QUrl.fromLocalFile(path)
+        if not QDesktopServices.openUrl(url):
+            QMessageBox.warning(self, 'Ошибка', f'Не удалось открыть файл:\n{path}')
+
+    def _remove_book(self, book: Book, item: QListWidgetItem) -> None:
+        self.shelf.remove_book(book)
+        self._book_list.takeItem(self._book_list.row(item))
+        self._refresh_stats()
