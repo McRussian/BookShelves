@@ -46,9 +46,17 @@ class Settings:
 
     @property
     def file_readers(self) -> list[dict]:
-        """Список словарей вида {'extension': 'epub', 'program': '/usr/bin/foliate'}."""
+        """Список словарей вида {'extension': 'epub', 'command': '/usr/bin/foliate %f'}."""
         return self._qs.value(self._KEY_FILE_READERS) or []
 
     @file_readers.setter
     def file_readers(self, readers: list[dict]) -> None:
         self._qs.setValue(self._KEY_FILE_READERS, readers)
+
+    def reader_command(self, extension: str) -> str | None:
+        """Команда для расширения или None если не настроено."""
+        ext = extension.lower().lstrip('.')
+        for r in self.file_readers:
+            if r.get('extension', '').lower() == ext:
+                return r.get('command') or None
+        return None

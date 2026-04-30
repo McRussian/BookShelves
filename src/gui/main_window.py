@@ -19,6 +19,7 @@ from src.database.seed import seed_reference_data
 from src.gui.app_signals import app_signals
 from src.gui.authors.author_dialog import AuthorDialog
 from src.gui.authors.author_manage_dialog import AuthorManageDialog
+from src.gui.settings.app_settings_dialog import AppSettingsDialog
 from src.gui.shelves.shelf_manage_dialog import ShelfManageDialog
 from src.gui.shelves.shelf_widget import ShelfWidget
 from src.gui.books.book_dialog import BookDialog
@@ -360,7 +361,8 @@ class MainWindow(QMainWindow):
 
     # ── Слоты (заглушки) ──────────────────────────────────────────────────────
 
-    def _on_app_settings(self):      pass
+    def _on_app_settings(self):
+        AppSettingsDialog(self).exec()
     def _on_shelf_add(self):
         if not self._current_user:
             return

@@ -1,3 +1,6 @@
+import shlex
+import subprocess
+
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
@@ -9,6 +12,7 @@ from src.database.models.book import Book
 from src.database.models.shelf import Shelf
 from src.gui.app_signals import app_signals
 from src.gui.books.book_select_dialog import BookSelectDialog
+from src.settings import Settings
 
 
 class ShelfWidget(QWidget):
@@ -177,19 +181,33 @@ class ShelfWidget(QWidget):
 
     def _edit_book(self, book: Book, item: QListWidgetItem) -> None:
         from src.gui.books.book_dialog import BookDialog
-        dlg = BookDialog(book=book, parent=self)
+        dlg = BookDialog(book=Book.get_by_id(book.id), parent=self)
         if dlg.exec() == QDialog.DialogCode.Accepted:
             updated = Book.get_by_id(book.id)
             item.setText(self._book_label(updated))
             item.setData(Qt.ItemDataRole.UserRole, updated)
 
     def _open_book(self, book: Book) -> None:
+        from pathlib import Path
+        book = Book.get_by_id(book.id)
         path = book.file_path
         if not path:
             return
-        url = QUrl.fromLocalFile(path)
-        if not QDesktopServices.openUrl(url):
-            QMessageBox.warning(self, 'Ошибка', f'Не удалось открыть файл:\n{path}')
+        if not Path(path).exists():
+            QMessageBox.warning(self, 'Файл не найден', f'Файл не найден:\n{path}')
+            return
+        ext = book.format.name if book.format else None
+        command = Settings().reader_command(ext) if ext else None
+        if command:
+            quoted = shlex.quote(path)
+            cmd = command.replace('%f', quoted) if '%f' in command else f'{command} {quoted}'
+            try:
+                subprocess.Popen(shlex.split(cmd))
+                return
+            except Exception as e:
+                QMessageBox.warning(self, 'Ошибка', f'Не удалось запустить приложение:\n{e}')
+                return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def _remove_book(self, book: Book, item: QListWidgetItem) -> None:
         self.shelf.remove_book(book)

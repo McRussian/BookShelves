@@ -33,12 +33,17 @@ class Shelf(BaseModel):
         return obj
 
     def get_books(self) -> list[Book]:
-        return list(
-            Book.select()
-            .join(ShelfBook)
+        ids = [
+            row[0] for row in
+            ShelfBook.select(ShelfBook.book)
             .where(ShelfBook.shelf == self)
             .order_by(ShelfBook.position)
-        )
+            .tuples()
+        ]
+        if not ids:
+            return []
+        books_by_id = {b.id: b for b in Book.select().where(Book.id.in_(ids))}
+        return [books_by_id[i] for i in ids if i in books_by_id]
 
     def remove_book(self, book: Book) -> None:
         ShelfBook.delete().where(
